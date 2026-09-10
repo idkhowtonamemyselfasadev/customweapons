@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "ABA",
+    "BWB",
+    "ACA"
+  ],
+  "key": {
+    "A": "minecraft:blue_ice",
+    "B": "minecraft:prismarine_crystals",
+    "W": "minecraft:iron_sword",
+    "C": "minecraft:enchanted_golden_apple"
+  },
+  "result": {
+    "id": "minecraft:iron_sword",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": {
+        "cw_weapon": "frostbrand"
+      }
+    }
+  }
+}

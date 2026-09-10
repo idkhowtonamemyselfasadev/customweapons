@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "customweapons",
+  "version": "${version}",
+  "name": "Custom Weapons",
+  "description": "Four craftable weapons with abilities: the Bloodletter, the Gale Edge, the Stormpiercer and the Aegis Hammer. Server-side only - players join with a completely vanilla client and install nothing.",
+  "authors": [
+    "Tim"
+  ],
+  "license": "MIT",
+  "environment": "server",
+  "entrypoints": {
+    "server": [
+      "dev.customweapons.CustomWeapons"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
