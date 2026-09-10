@@ -161,7 +161,11 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
 
     private static void reloadConfig() {
         config = WeaponsConfig.load();
-        generation++;
+        // Seconds since the epoch, not a counter: a counter restarts at 1 with every server
+        // start, so a weapon stamped "1" by last week's build is taken for current by this
+        // week's and never picks up what the new build adds. This cost the Aegis Hammer its
+        // 3D model. Time only moves forward, so every start re-stamps everything once.
+        generation = Math.max(generation + 1, (int) (System.currentTimeMillis() / 1000L));
     }
 
     // --------------------------------------------------------------------- ticking
