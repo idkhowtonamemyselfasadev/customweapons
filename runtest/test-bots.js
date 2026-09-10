@@ -283,6 +283,42 @@ async function main() {
     check(!!firstFrame && !!last && last.frame === 0 && last.t > firstFrame.t + 500,
         'the frame is cleared again once the animation ends',
         last ? `last update frame=${last.frame} at +${last.t}ms` : 'no updates');
+
+    // A weapon that leaves the main hand mid-animation (slot switch, knockback, death)
+    // used to keep its last frame for good: a sword drawn stuck mid-swing. The sweep now
+    // clears a frame off any weapon that is not the animating main-hand item.
+    console.log('   -- switching away mid-animation');
+    cmd('effect give Dummy minecraft:instant_health 1 4 true');
+    await sleep(1200);
+    const swordSlot = smith.quickBarSlot;
+    const emptySlot = [0, 1, 2, 3, 4, 5, 6, 7, 8].find((i) => i !== swordSlot && !smith.inventory.slots[36 + i]);
+    const away = watchFrames(smith, 'cw:bloodletter');
+    const awayStart = Date.now();
+    smith.attack(target);
+    await sleep(100);
+    smith.setQuickBarSlot(emptySlot);
+    const switchedAt = Date.now() - awayStart;
+    await sleep(1500);
+    smith.setQuickBarSlot(swordSlot);
+    await sleep(1000);
+    away.stop();
+    const awayTrace = away.raw.map((s) => s.frame);
+    console.log(`   frames on the wire: ${awayTrace.join(',')}  (switched away at +${switchedAt}ms)`);
+    const awayLast = away.raw[away.raw.length - 1];
+    check(away.raw.some((s) => s.frame > 0), 'the animation had started before the switch');
+    check(!!awayLast && awayLast.frame === 0,
+        'the frame is cleared off the sword once it leaves the main hand',
+        awayLast ? `last update frame=${awayLast.frame} at +${awayLast.t}ms` : 'no updates');
+    // And the server's own view of the slot, echoed into test.log by a console data get.
+    const logBefore = fs.readFileSync(RUN + '/test.log', 'utf8').length;
+    cmd(`data get entity Smith Inventory[{Slot:${swordSlot}b}].components`);
+    await sleep(1500);
+    const echoed = fs.readFileSync(RUN + '/test.log', 'utf8').slice(logBefore)
+        .split('\n').filter((l) => /custom_model_data/.test(l)).slice(-1)[0] || '';
+    const cmdComponent = (echoed.match(/custom_model_data"?:\s*\{[^}]*\}/) || [''])[0];
+    console.log('   data get: ' + (cmdComponent || echoed.slice(0, 200) || '(no echo in test.log)'));
+    check(!!cmdComponent && !/floats:\s*\[\s*-?\d/.test(cmdComponent),
+        "the server's copy of the sword carries no frame float", cmdComponent);
   }
 
   // ---------------------------------------------------- 4. a renamed sword is not one
