@@ -89,5 +89,6 @@ public final class Bloodletter extends CustomWeapon {
     public void onHit(ServerPlayer attacker, LivingEntity victim, ItemStack weapon,
                       float damageDealt, WeaponsConfig config) {
         CustomWeapons.bleed().apply(attacker, victim, config);
+        CustomWeapons.animations().play(attacker, this, config);
     }
 }

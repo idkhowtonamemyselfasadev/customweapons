@@ -98,6 +98,7 @@ public final class Tidecaller extends CustomWeapon {
     @Override
     public void onHit(ServerPlayer attacker, LivingEntity victim, ItemStack weapon,
                       float damageDealt, WeaponsConfig config) {
+        CustomWeapons.animations().play(attacker, this, config);
         wetBonus(attacker, victim, config);
     }
 

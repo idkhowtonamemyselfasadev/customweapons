@@ -21,6 +21,8 @@ public final class PlayerState {
         long fallImmuneUntil;
         long momentumUntil;
         boolean airDashUsed;
+        /** The legendary this player is carrying, so a second one is the one to drop. */
+        String carrying;
     }
 
     private final Map<UUID, State> states = new HashMap<>();
@@ -55,6 +57,15 @@ public final class PlayerState {
         }
         state.momentumUntil = 0;
         return true;
+    }
+
+    public String carrying(ServerPlayer player) {
+        State state = states.get(player.getUUID());
+        return state == null ? null : state.carrying;
+    }
+
+    public void setCarrying(ServerPlayer player, String weaponId) {
+        get(player).carrying = weaponId;
     }
 
     public void markAirDashUsed(ServerPlayer player) {

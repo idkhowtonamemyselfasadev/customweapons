@@ -58,6 +58,8 @@ public final class Stormpiercer extends CustomWeapon {
                         .map(id -> id.substring(id.indexOf(':') + 1).replace('_', ' ') + "s")
                         .toList());
         java.util.List<Component> lines = new java.util.ArrayList<>();
+        lines.add(Weapons.loreLine(String.format("A full draw hits for %.0f, never less, never more",
+                config.stormpiercer_full_damage)));
         lines.add(Weapons.loreLine(String.format("Shock: a fully drawn hit deals +%.1f%s",
                 config.shock_bonus_damage, config.shock_lightning ? " and calls lightning" : "")));
         if (!executes.isEmpty()) {
@@ -115,12 +117,27 @@ public final class Stormpiercer extends CustomWeapon {
     public void onArrowFired(ServerPlayer shooter, AbstractArrow arrow, ServerLevel level,
                              WeaponsConfig config) {
         // Draw strength read off the launch speed: a bow fires at charge * 3.0 blocks a tick.
-        if (arrow.getDeltaMovement().length() < config.shock_min_arrow_speed) {
+        double speed = arrow.getDeltaMovement().length();
+        boolean full = speed >= config.shock_min_arrow_speed;
+        // Vanilla arrow damage is base * speed, rounded up, plus a random crit on a full
+        // draw. Setting the base so a full draw lands exactly on the configured number, and
+        // switching the crit off, makes the tooltip number the real number. A partial draw
+        // keeps the same base and so scales down with its speed, as vanilla does.
+        if (speed > 0.01) {
+            arrow.setBaseDamage((config.stormpiercer_full_damage - 0.01) / (full ? speed : 3.0));
+            arrow.setCritArrow(false);
+        }
+        if (!full) {
             return;
         }
-        if (!CustomWeapons.cooldowns().ready(shooter, ShockManager.KEY)) {
+        int remaining = CustomWeapons.cooldowns().remaining(shooter, ShockManager.KEY);
+        if (remaining > 0) {
+            shooter.displayClientMessage(Component.literal(
+                            String.format("Shock  %.0fs", remaining / 20.0))
+                    .withStyle(ChatFormatting.GRAY), true);
             return;
         }
         CustomWeapons.shock().arm(arrow, config);
+        CustomWeapons.animations().play(shooter, this, config);
     }
 }

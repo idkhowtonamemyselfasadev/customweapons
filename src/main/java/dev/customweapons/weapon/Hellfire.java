@@ -108,6 +108,7 @@ public final class Hellfire extends CustomWeapon {
         }
         CustomWeapons.cooldowns().set(shooter, BLAST, config.hellfire_cooldown_ticks);
         CustomWeapons.projectiles().arm(this, shooter, arrow);
+        CustomWeapons.animations().play(shooter, this, config);
         level.playSound(null, shooter.getX(), shooter.getY(), shooter.getZ(),
                 SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 1.0f, 0.7f);
         if (config.log_abilities) {
