@@ -71,6 +71,53 @@ function describe(item) {
   });
 }
 
+// ------------------------------------------------------------------ attack animations
+
+/**
+ * Watches the frame number the server writes into the held weapon's custom_model_data
+ * floats after an ability fires.
+ *
+ * Two views of the same packets. prismarine-item's parse of the slot is recorded as-is, but
+ * minecraft-data's 1.21.11 tables mis-read `attribute_modifiers`, so a set_slot carrying a
+ * sword never comes out of the deserializer at all (dropped silently, no error: mineflayer
+ * hides them) and bot.heldItem stays stale. So the packet stream is tapped below the
+ * deserializer, on the decompressor, where every packet body arrives parsed or not, and
+ * the assertion is on the bytes: the component is
+ * [0x11 custom_model_data][varint n][n x f32][0x00 no flags][0x01 one string][len]"cw:<id>"
+ * and the mod writes at most one float, so the frame sits at a fixed offset in front of the
+ * selector string. A body starts with its packet id: 0x14 set_slot, 0x12 window_items.
+ */
+function watchFrames(bot, selector) {
+  const raw = [];          // {t, frame}: 0 means "no float", NaN means an unexpected layout
+  const parsed = new Set();
+  const started = Date.now();
+  const stream = bot._client.decompressor || bot._client.splitter;
+  const onRaw = (buf) => {
+    if (buf[0] !== 0x14 && buf[0] !== 0x12) return;
+    const idx = buf.indexOf(selector, 0, 'latin1');
+    if (idx < 0) return;
+    const nFlags = idx - 3;
+    if (buf[idx - 1] !== selector.length || buf[idx - 2] !== 1 || buf[nFlags] !== 0) {
+      raw.push({ t: Date.now() - started, frame: NaN });
+      return;
+    }
+    let frame = NaN;
+    if (buf[nFlags - 1] === 0 && buf[nFlags - 2] === 17) frame = 0;
+    else if (buf[nFlags - 5] === 1 && buf[nFlags - 6] === 17) frame = buf.readFloatBE(nFlags - 4);
+    raw.push({ t: Date.now() - started, frame });
+  };
+  stream.on('data', onRaw);
+  const poll = setInterval(() => {
+    const item = bot.heldItem;
+    const cmd = item && (item.components || []).find((c) => c.type === 'custom_model_data');
+    if (cmd) parsed.add(JSON.stringify(cmd.data !== undefined ? cmd.data : cmd));
+  }, 50);
+  return {
+    raw, parsed,
+    stop() { stream.removeListener('data', onRaw); clearInterval(poll); },
+  };
+}
+
 // ---------------------------------------------------------------------------- crafting
 
 async function craftBloodletter(bot) {
@@ -149,12 +196,22 @@ async function main() {
   cmd('difficulty normal');
   cmd('time set day');
   cmd('weather clear');
+  // The world is flat at y=-60 with a fresh random seed every run. When the arena lands on
+  // a slime chunk, slimes spawn in the seconds between boot and the gamerule above, keep
+  // existing after it, and wander in during a later section - one killed Dummy in the
+  // middle of a crafting click. Clear whatever spawned before the rule took.
+  cmd('kill @e[type=!minecraft:player]');
   cmd('tp Smith 0 -59 0');
   cmd('tp Dummy 2 -59 0');
   cmd('tp Archer 0 -59 6');
+  // The weapons hit hard enough that a 20-hp Dummy dies mid-section: three Bloodletter
+  // swings plus their bleed alone come to ~31. Sixty covers every section here and is still
+  // within what one instant_health IV (64) heals, so every heal below is a heal to full.
+  cmd('attribute Dummy minecraft:max_health base set 60');
+  cmd('effect give Dummy minecraft:instant_health 1 4 true');
   await sleep(2500);
   console.log(`   Smith ${smith.entity.position}`);
-  console.log(`   Dummy ${dummy.entity.position}`);
+  console.log(`   Dummy ${dummy.entity.position}, ${dummy.health} hp`);
 
   // ------------------------------------------------------------- 1. crafting
   console.log('\n== 1. crafting the Bloodletter in a crafting table ==');
@@ -188,6 +245,9 @@ async function main() {
   if (!target) {
     fail('Smith can see Dummy');
   } else {
+    // Each hit also plays the attack animation on the held sword: frames 1..10, one a
+    // tick, then the float is cleared. Watch the held slot while the swings go in.
+    const anim = watchFrames(smith, 'cw:bloodletter');
     for (let i = 0; i < 3; i++) {
       smith.attack(target);
       await sleep(600);
@@ -195,6 +255,7 @@ async function main() {
     const afterHits = dummy.health;
     console.log(`   Dummy ${dummyStart} -> ${afterHits} after three swings`);
     await sleep(4000);   // hits stopped; only the bleed is still running
+    anim.stop();
     const afterBleed = dummy.health;
     console.log(`   Dummy ${afterHits} -> ${afterBleed} with nobody touching it`);
     check(afterBleed < afterHits, 'bleed keeps damaging after the attacker stops',
@@ -205,6 +266,23 @@ async function main() {
     check(smith.actionBars.some((m) => /Bleed x/.test(m)),
         'attacker sees the bleed stacks on the action bar',
         smith.actionBars.filter((m) => /Bleed/.test(m)).slice(-1)[0] || '');
+
+    // The animation, as the client received it.
+    const trace = anim.raw.map((s) => s.frame);
+    console.log(`   held-slot updates: ${anim.raw.length}; frames on the wire: ${trace.join(',')}`);
+    console.log(`   last update at +${anim.raw.length ? anim.raw[anim.raw.length - 1].t : '?'}ms; `
+        + `prismarine-item's custom_model_data: ${JSON.stringify([...anim.parsed]).slice(0, 300)}`);
+    const firstFrame = anim.raw.find((s) => s.frame > 0);
+    const early = firstFrame
+        ? new Set(anim.raw.filter((s) => s.frame > 0 && s.t <= firstFrame.t + 600).map((s) => s.frame))
+        : new Set();
+    check(early.size >= 3, 'the held sword steps through animation frames after a hit',
+        `${early.size} distinct frames within 0.6s: ${[...early].join(',')}`);
+    check(!trace.some((f) => Number.isNaN(f)), 'every frame update has the expected layout');
+    const last = anim.raw[anim.raw.length - 1];
+    check(!!firstFrame && !!last && last.frame === 0 && last.t > firstFrame.t + 500,
+        'the frame is cleared again once the animation ends',
+        last ? `last update frame=${last.frame} at +${last.t}ms` : 'no updates');
   }
 
   // ---------------------------------------------------- 4. a renamed sword is not one
@@ -300,12 +378,17 @@ async function main() {
 
   // --------------------------------------------------------- 7. the Stormpiercer
   console.log('\n== 7. Stormpiercer shock ==');
-  // Every full draw fired off cooldown arms one arrow; test.sh checks the server agrees.
+  // Every full draw fired with the shock ready arms one arrow, hit or miss. One fired inside
+  // the cooldown is a plain shot: a "Shock  Ns" note on the action bar and no arm. test.sh
+  // checks the server's arm count against the ready ones counted here.
   let fullDraws = 0;
+  let shockHitAt = 0;
   cmd('clear Archer');
   cmd('customweapon give Archer stormpiercer');
   cmd('give Archer minecraft:arrow 16');
   cmd('effect give Dummy minecraft:instant_health 1 4 true');
+  // Smith out of chain range (5 blocks), so the shock's numbers are Dummy's alone.
+  cmd('tp Smith 0 -59 -12');
   cmd('tp Archer 3 -59 6');
   cmd('tp Dummy 3 -59 0');
   await sleep(2000);
@@ -332,31 +415,60 @@ async function main() {
     archer.deactivateItem();
     await sleep(2500);
 
-    // Up to three attempts: a bot's aim is not what is under test here, and a single miss
-    // would fail a run for no reason.
-    let landed = false;
-    for (let attempt = 1; attempt <= 3 && !landed; attempt++) {
-      console.log(`   full draw, attempt ${attempt}`);
-      cmd('tp Dummy 3 -59 0');
-      cmd('tp Archer 3 -59 4');
-      await sleep(1200);
-      const target = archer.players['Dummy'] && archer.players['Dummy'].entity;
-      if (!target) break;
-      await archer.lookAt(target.position.offset(0, 1.5, 0), true);
-      const before = dummy.health;
-      archer.activateItem();
-      await sleep(1400);
-      archer.deactivateItem();
-      fullDraws++;
-      await sleep(2500);
-      console.log(`   Dummy ${before} -> ${dummy.health}`);
-      landed = dummy.health < before;
-      if (!landed) {
+    // A full draw at four blocks, up to three attempts: a bot's aim is not what is under
+    // test here, and a single miss would fail a run for no reason. Both are put back on
+    // their marks and Dummy healed to full before every shot, so the drop is one arrow's.
+    const fullDrawAtDummy = async (label, arms) => {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        console.log(`   ${label}, attempt ${attempt}`);
+        cmd('tp Dummy 3 -59 0');
+        cmd('tp Archer 3 -59 4');
         cmd('effect give Dummy minecraft:instant_health 1 4 true');
-        await sleep(1000);
+        await sleep(1200);
+        const target = archer.players['Dummy'] && archer.players['Dummy'].entity;
+        if (!target) break;
+        await archer.lookAt(target.position.offset(0, 1.5, 0), true);
+        archer.actionBars.length = 0;
+        const before = dummy.health;
+        archer.activateItem();
+        await sleep(1400);
+        archer.deactivateItem();
+        if (arms) fullDraws++;
+        await sleep(2500);
+        const drop = before - dummy.health;
+        console.log(`   Dummy ${before} -> ${dummy.health} (-${drop.toFixed(1)}); Archer bar `
+            + JSON.stringify(archer.actionBars));
+        if (drop > 0) return { drop, bars: archer.actionBars.slice() };
+      }
+      return null;
+    };
+
+    // Dummy wears no armour and has no effects, so the arrow is worth exactly 10 and the
+    // shock exactly 6 on top. The arrow loses a whisker of speed over four blocks, hence
+    // the tolerance.
+    const shocked = await fullDrawAtDummy('full draw, shock ready', true);
+    check(!!shocked, 'a fully drawn arrow lands and shocks');
+    if (shocked) {
+      shockHitAt = Date.now();
+      check(Math.abs(shocked.drop - 16) <= 1.5,
+          'with the shock ready a full draw deals 10 (arrow) + 6 (shock)',
+          `${shocked.drop.toFixed(1)} hp`);
+      check(shocked.bars.some((m) => /^Shock/.test(m.trim())),
+          'the shooter sees the shock land', shocked.bars.slice(-1)[0] || '');
+
+      // Straight away again, well inside the 30s cooldown: the arrow still does its 10, the
+      // shock does not fire, and the shooter is told how long is left.
+      const plain = await fullDrawAtDummy('full draw, shock on cooldown', false);
+      check(!!plain, 'a full draw inside the cooldown still lands');
+      if (plain) {
+        check(Math.abs(plain.drop - 10) <= 1.5,
+            'inside the cooldown a full draw is the arrow alone: 10',
+            `${plain.drop.toFixed(1)} hp`);
+        check(plain.bars.some((m) => /^Shock\s+\d+s$/.test(m.trim())),
+            'the shooter is shown the shock cooldown instead',
+            plain.bars.filter((m) => /Shock/.test(m)).slice(-1)[0] || 'no Shock note');
       }
     }
-    check(landed, 'a fully drawn arrow lands and shocks');
   }
 
   // ------------------------------------------------------------ 8. new weapons
@@ -415,9 +527,14 @@ async function main() {
   cmd('tp Archer 3 -59 4');
   await sleep(1500);
   await equipByName(archer, 'bow');
-  // The shock cooldown (6s) was charged by the hit in section 7; a shot inside it fires an
-  // unarmed arrow, and the server-side arm count is compared against the full draws fired.
-  await sleep(Math.max(0, 5000 - (Date.now() - section8Start)));
+  // The shock cooldown (30s) was charged by the hit in section 7, and a full draw inside it
+  // is a plain arrow that would not execute anything. Nothing resets it short of a
+  // reconnect, so wait it out; the shot then proves the shock comes back on its own.
+  const cooldownLeft = shockHitAt ? shockHitAt + 31500 - Date.now() : 0;
+  if (cooldownLeft > 0) {
+    console.log(`   waiting ${(cooldownLeft / 1000).toFixed(1)}s for the shock cooldown`);
+    await sleep(cooldownLeft);
+  }
 
   let executed = false;
   for (let attempt = 1; attempt <= 3 && !executed; attempt++) {
@@ -548,7 +665,7 @@ async function main() {
   cmd('effect clear Archer');
   await healDummy();
   console.log(`   section 8 took ${((Date.now() - section8Start) / 1000).toFixed(1)}s`);
-  console.log(`   full draws fired: ${fullDraws}`);
+  console.log(`   full draws fired with the shock ready: ${fullDraws}`);
 
   // ------------------------------------------------------------- 9. SMP rules
   console.log('\n== 9. one of each weapon on the world ==');
@@ -613,6 +730,41 @@ async function main() {
   await sleep(1500);
   cmd('customweapon unclaim weapon bloodletter');
   await sleep(1500);
+
+  // ------------------------------------------------- 9b. one legendary per player
+  console.log('\n== 9b. one legendary per player ==');
+  // The main suite runs with the rule off so the earlier sections can hand weapons around
+  // freely; switch it on for this check the same way the uniqueness rule was.
+  cmd('clear Smith');
+  cmd('tp Smith 0 -59 0');
+  await sleep(1500);
+  await setConfig('"one_weapon_per_player": false', '"one_weapon_per_player": true');
+  smith.chats.length = 0;
+  cmd('customweapon give Smith frostbrand');
+  await sleep(1000);
+  cmd('customweapon give Smith gale_edge');
+  await sleep(1000);
+  const names = smith.inventory.items().map((i) => i.name);
+  const legendaries = smith.inventory.items().filter((i) => /Frostbrand|Gale Edge/.test(JSON.stringify(i)));
+  console.log('   Smith carries ' + JSON.stringify(names));
+  check(legendaries.length === 1 && legendaries[0].name === 'iron_sword',
+      'the legendary they already carried is the one they keep',
+      `${legendaries.length} legendary item(s): ${legendaries.map((i) => i.name).join(', ') || 'none'}`);
+  check(!names.includes('diamond_sword'), 'the second one left the inventory');
+  const onFloor = Object.values(smith.entities).filter((e) =>
+      e.name === 'item' && e.position.distanceTo(smith.entity.position) < 4);
+  check(onFloor.length >= 1, 'and is lying on the ground at their feet',
+      `${onFloor.length} item entity(ies) within 4 blocks`);
+  check(smith.chats.some((m) => /only one legendary/.test(m)), 'and they are told why',
+      smith.chats.filter((m) => /legendary/.test(m)).slice(-1)[0] || '');
+  // Off again, and nothing left on the floor or claimed, before the altar section.
+  cmd('kill @e[type=minecraft:item]');
+  cmd('clear Smith');
+  await sleep(600);
+  await setConfig('"one_weapon_per_player": true', '"one_weapon_per_player": false');
+  cmd('customweapon unclaim weapon frostbrand');
+  cmd('customweapon unclaim weapon gale_edge');
+  await sleep(1000);
 
   // ------------------------------------------------------------------ 9. altars
   console.log('\n== 9. weapon altars ==');

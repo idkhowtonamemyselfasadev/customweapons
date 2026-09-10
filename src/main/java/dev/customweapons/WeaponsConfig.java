@@ -25,24 +25,24 @@ public final class WeaponsConfig {
 
     // ---------------------------------------------------------------- Bloodletter
     public boolean bloodletter_enabled = true;
-    /** 2.0 a hit: a quarter of a vanilla netherite sword. All the damage is in the bleed. */
-    public double bloodletter_attack_damage = 2.0;
-    /** Fast, so three hits stack full bleed in 1.5s. 2.0 x 2.0 = 4.0 DPS from swings. */
+    /** 4.0 a hit, fast: the swings stack bleed, and the bleed is most of the damage. */
+    public double bloodletter_attack_damage = 4.0;
+    /** Fast, so three hits stack full bleed in 1.5s. 4.0 x 2.0 = 8.0 DPS from swings. */
     public double bloodletter_attack_speed = 2.0;
     public int bleed_max_stacks = 3;
     public int bleed_duration_ticks = 60;
     public int bleed_tick_interval_ticks = 10;
-    /** 1.0 per stack every 10 ticks = 2.0 DPS per stack, 6.0 DPS at three stacks. */
-    public double bleed_damage_per_stack = 1.0;
+    /** 1.5 per stack every 10 ticks = 3.0 DPS per stack, 9.0 DPS at three stacks. */
+    public double bleed_damage_per_stack = 1.5;
     /**
      * Total damage one bleed instance may deal before it ends, refilled by a fresh hit.
      * Without this, 6.0 DPS on a window that every hit refreshes never stops.
      */
-    public double bleed_damage_budget = 8.0;
+    public double bleed_damage_budget = 12.0;
 
     // ------------------------------------------------------------------ Gale Edge
     public boolean gale_edge_enabled = true;
-    public double gale_edge_attack_damage = 5.95;
+    public double gale_edge_attack_damage = 7.0;
     public double gale_edge_attack_speed = 1.8;
     public int dash_cooldown_ticks = 160;
     public double dash_power = 1.5;
@@ -50,17 +50,24 @@ public final class WeaponsConfig {
     public double dash_max_y = 0.8;
     public int dash_fall_immunity_ticks = 120;
     public int momentum_window_ticks = 40;
-    public double momentum_bonus_damage = 2.0;
+    public double momentum_bonus_damage = 4.0;
 
     // ---------------------------------------------------------------- Stormpiercer
     public boolean stormpiercer_enabled = true;
-    public int shock_cooldown_ticks = 120;
+    /**
+     * What a fully drawn arrow deals on its own, before armour. 10.0 is five hearts; a
+     * vanilla bow lands 9 plus a random crit. Partial draws scale down with the draw, and
+     * the Stormpiercer never crits, so the number is the number.
+     */
+    public double stormpiercer_full_damage = 10.0;
+    public int shock_cooldown_ticks = 600;
     /**
      * A bow shoots at {@code charge * 3.0} blocks/tick, so 2.7 is a draw of 0.9. Reading the
      * charge off the arrow's speed avoids needing a mixin on the bow.
      */
     public double shock_min_arrow_speed = 2.7;
-    public double shock_bonus_damage = 4.0;
+    /** On top of the arrow: 10 + 6 = 16, eight hearts, when the lightning is ready. */
+    public double shock_bonus_damage = 6.0;
     public int shock_glowing_ticks = 120;
     public double shock_chain_range = 5.0;
     public double shock_chain_damage = 3.0;
@@ -78,11 +85,11 @@ public final class WeaponsConfig {
 
     // --------------------------------------------------------------- Aegis Hammer
     public boolean aegis_hammer_enabled = true;
-    public double aegis_hammer_attack_damage = 9.0;
+    public double aegis_hammer_attack_damage = 11.0;
     public double aegis_hammer_attack_speed = 0.9;
     public int slam_cooldown_ticks = 300;
     public double slam_radius = 5.0;
-    public double slam_damage = 4.0;
+    public double slam_damage = 8.0;
     public int slam_slowness_ticks = 80;
     public int slam_slowness_amplifier = 1;
     public int slam_resistance_ticks = 100;
@@ -91,9 +98,9 @@ public final class WeaponsConfig {
 
     // ----------------------------------------------------------------- Frostbrand
     public boolean frostbrand_enabled = true;
-    /** Just over an iron sword's 6.0, on a slower swing, so its DPS still sits under it. */
-    public double frostbrand_attack_damage = 6.5;
-    public double frostbrand_attack_speed = 1.4;
+    /** Netherite-sword DPS on an iron sword: the frost is the reason, this is the excuse. */
+    public double frostbrand_attack_damage = 8.0;
+    public double frostbrand_attack_speed = 1.6;
     /**
      * Frost added per hit, in the same units as powder snow. Vanilla thaws 2 ticks a tick,
      * so at 1.4 swings a second three hits in a row reach the 140 that counts as frozen
@@ -102,17 +109,17 @@ public final class WeaponsConfig {
     public int frost_ticks_per_hit = 70;
     public int frost_slowness_ticks = 40;
     public int frost_slowness_amplifier = 1;
-    public double shatter_damage = 4.0;
+    public double shatter_damage = 8.0;
     public int shatter_slowness_ticks = 40;
     public int shatter_slowness_amplifier = 3;
 
     // ----------------------------------------------------------------- Tidecaller
     public boolean tidecaller_enabled = true;
-    /** A vanilla trident is 9.0; the harpoon is what the point is for. */
-    public double tidecaller_attack_damage = 8.0;
+    /** A vanilla trident is 9.0. */
+    public double tidecaller_attack_damage = 10.0;
     public double tidecaller_attack_speed = 1.1;
     /** Melee and thrown hits on a target in water or rain deal this much extra. */
-    public double tide_wet_bonus_damage = 2.0;
+    public double tide_wet_bonus_damage = 4.0;
     public int harpoon_cooldown_ticks = 200;
     /** How hard a harpooned target is yanked towards the thrower, blocks a tick. */
     public double harpoon_pull_power = 1.4;
@@ -122,10 +129,10 @@ public final class WeaponsConfig {
     public boolean hellfire_enabled = true;
     public int hellfire_cooldown_ticks = 160;
     /**
-     * Blast strength. TNT is 4.0 and a creeper 3.0; at 1.5 a direct hit is about 11 before
+     * Blast strength. TNT is 4.0 and a creeper 3.0; at 2.0 a direct hit is about 15 before
      * armour and falls off fast with distance. Blocks are never broken.
      */
-    public double hellfire_explosion_power = 1.5;
+    public double hellfire_explosion_power = 2.0;
     /** Leave fire behind, like a ghast fireball would. */
     public boolean hellfire_fire = false;
 
@@ -146,7 +153,12 @@ public final class WeaponsConfig {
      * turned back into its parts and its materials handed back.
      */
     public boolean unique_weapons = true;
-    /** One temple per weapon too, so the four of them are the map's four landmarks. */
+    /**
+     * A player may carry only one legendary at a time. A second one, however it arrived,
+     * is dropped at their feet with a note; the one they had first is the one they keep.
+     */
+    public boolean one_weapon_per_player = true;
+    /** One temple per weapon too, so the seven of them are the map's landmarks. */
     public boolean one_altar_per_weapon = true;
     /** Tell everyone when a legendary is forged. */
     public boolean announce_forging = true;
@@ -166,10 +178,18 @@ public final class WeaponsConfig {
     /** With pack_required off: ask each player in chat, on join, whether they want the models. */
     public boolean pack_offer_on_join = true;
     /** A direct download link to the pack zip. A GitHub release asset works. */
-    public String pack_url = "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.0.0/CustomWeapons-Models.zip";
+    public String pack_url = "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.1.0/CustomWeapons-Models.zip";
     /** SHA-1 of that zip. Change it with the file, or clients keep a stale cached copy. */
-    public String pack_sha1 = "7f9a282fac0db5a08e6a4e0a7560ea50c1eb41e1";
+    public String pack_sha1 = "d8eef744ca449c55bd9aea289ce8c2ed2cc9a600";
     public String pack_offer_message = "This server has 3D models for the legendary weapons. Want them?";
+
+    // ------------------------------------------------------------------ animations
+    /**
+     * Ticks an attack animation runs for after an ability fires. The held weapon carries a
+     * frame number in custom_model_data for that long and the resource pack shows one pose
+     * per frame. 0 turns it off. Only players with the pack see anything.
+     */
+    public int animation_ticks = 10;
 
     // ----------------------------------------------------------------------- misc
     /** How often held/carried weapons are re-stamped with their stats, in ticks. */

@@ -17,26 +17,25 @@ Built and verified against a real 1.21.11 dedicated server — see [Testing](#te
 
 | Weapon | Base item | Attack damage | Attack speed | DPS | Cooldown |
 |---|---|---|---|---|---|
-| **Bloodletter** | netherite sword | 2.0 | 2.0 | 4.0 swings + 6.0 bleed = 10.0 | none |
-| **Gale Edge** | diamond sword | 5.95 | 1.8 | 10.7 | 8 s |
-| **Stormpiercer** | bow | arrow + 4.0 on shock, lightning | — | — | 6 s |
-| **Aegis Hammer** | netherite axe | 9.0 | 0.9 | 8.1 | 15 s |
-| **Frostbrand** | iron sword | 6.5 | 1.4 | 9.1 + shatter | none |
-| **Tidecaller** | trident | 8.0 | 1.1 | 8.8 | 10 s |
+| **Bloodletter** | netherite sword | 4.0 | 2.0 | 8.0 swings + 9.0 bleed = 17.0 | none |
+| **Gale Edge** | diamond sword | 7.0 | 1.8 | 12.6, +4.0 after a dash | 8 s |
+| **Stormpiercer** | bow | 10.0 full draw, +6.0 lightning | — | — | 30 s |
+| **Aegis Hammer** | netherite axe | 11.0 | 0.9 | 9.9, slam 8.0 | 15 s |
+| **Frostbrand** | iron sword | 8.0 | 1.6 | 12.8, shatter +8.0 | none |
+| **Tidecaller** | trident | 10.0 | 1.1 | 11.0, +4.0 wet | 10 s |
 | **Hellfire** | crossbow | bolt + blast | — | — | 8 s |
 
 A vanilla netherite sword is 12.8 DPS, a netherite axe 10.0, an iron sword 9.6 and a trident
-9.9. Every weapon here sits below its vanilla counterpart on raw damage — the ability is what
-the crafting cost buys. The one exception is the Stormpiercer against the two mobs it
-executes, which is the point of it.
+9.9. These are legendaries, one of each on the world: each matches or beats its vanilla
+counterpart on raw damage, and the ability is on top. All of it is in the config.
 
 ### Bloodletter — sustained bleed
 
-2.0 a hit is a quarter of the sword it is built on. The fast swing exists to stack bleed.
+4.0 a hit on a fast swing, and the swing exists to stack bleed.
 
 - Every hit applies or refreshes **Bleed** for 3 s, stacking to 3.
-- Bleed deals **1.0 per stack every 0.5 s** — 2.0 DPS a stack, 6.0 DPS at three.
-- Each bleed carries an **8.0 damage budget**; when it is spent the bleed ends, and a fresh
+- Bleed deals **1.5 per stack every 0.5 s** — 3.0 DPS a stack, 9.0 DPS at three.
+- Each bleed carries a **12.0 damage budget**; when it is spent the bleed ends, and a fresh
   hit refills it. Without that cap, a bleed whose timer every hit refreshes never stops.
 - One bleed per victim. A second Bloodletter user takes over the existing one rather than
   running a parallel stack. Cleared by milk, death and a dimension change.
@@ -46,15 +45,18 @@ executes, which is the point of it.
 
 - **Dash** (right-click, 8 s): launches you along your look direction, Y clamped to 0.3–0.8
   so looking up is not a rocket. 6 s of fall immunity.
-- The next hit within 2 s is a **Momentum Strike**, +2.0 damage.
+- The next hit within 2 s is a **Momentum Strike**, +4.0 damage.
 - One air dash. Airborne with it spent, the click does nothing and does **not** eat the
   cooldown.
 
 ### Stormpiercer — ranged shock
 
-- A **fully drawn** hit deals +4.0, **calls a lightning bolt down on the target**, applies
-  Glowing for 6 s, and chains to one other entity within 5 blocks for 3.0. Partial draws fire
-  as an ordinary bow.
+- A **fully drawn** arrow hits for exactly **10.0** (five hearts) before armour: no crit
+  roll, and partial draws scale down with the draw.
+- When the shock is ready, a fully drawn hit adds **+6.0** for **16.0** (eight hearts),
+  **calls a lightning bolt down on the target**, applies Glowing for 6 s, and chains to one
+  other entity within 5 blocks for 3.0. Then **30 s** of cooldown, charged on the hit; the
+  bow still hits for 10 meanwhile and the action bar shows the time left.
 - A fully drawn hit **kills a creeper or a skeleton outright** (`shock_instakill`, a list of
   entity ids, never players). The kill goes through the normal death path, so it is credited
   to the shooter and drops loot and experience.
@@ -70,7 +72,7 @@ executes, which is the point of it.
 
 ### Aegis Hammer — area control
 
-- **Ground Slam** (right-click on the ground, 15 s): 4.0 damage, Slowness II for 4 s and a
+- **Ground Slam** (right-click on the ground, 15 s): 8.0 damage, Slowness II for 4 s and a
   small pop-up to everything within 5 blocks with line of sight; Resistance I for 5 s to you.
 - In mid-air it does nothing and does not eat the cooldown.
 - Built on a netherite **axe**, not a mace: a mace's fall-distance smash would stack on top
@@ -81,7 +83,7 @@ executes, which is the point of it.
 - Every hit adds **frost** — vanilla's own powder-snow freeze counter, so a player sees the
   frost creep in from the edges of the screen and a mob shivers — and Slowness II for 2 s.
 - Frost thaws at vanilla's rate, so it is a matter of hitting faster than the target thaws.
-  Three hits in a row freeze the target solid; the third one **shatters**: +4.0 damage,
+  Three hits in a row freeze the target solid; the third one **shatters**: +8.0 damage,
   Slowness IV for 2 s, and the frost resets.
 - No cooldown and no state of its own: the counter lives on the entity and vanilla cleans it
   up. Built on an iron sword, so it is the cheapest base and the most fragile.
@@ -90,13 +92,13 @@ executes, which is the point of it.
 
 - A **thrown** hit drags the target to you (10 s cooldown, charged on the hit, so a miss costs
   nothing). The throw itself is vanilla's, Loyalty and Riptide included.
-- Thrown or swung, anything standing **in water or rain** takes +2.0.
-- 8.0 a hit, under a vanilla trident's 9.0.
+- Thrown or swung, anything standing **in water or rain** takes +4.0.
+- 10.0 a hit, over a vanilla trident's 9.0.
 
 ### Hellfire — exploding bolts
 
 - The first bolt after the cooldown is armed on the shot and **explodes where it lands**, on
-  an entity or in the ground. Power 1.5: about 11 before armour on a direct hit, falling off
+  an entity or in the ground. Power 2.0: about 15 before armour on a direct hit, falling off
   fast. 8 s cooldown, charged on the shot, because a bolt that lands somewhere is not a miss.
 - **Breaks no blocks.** On an SMP a ranged block-breaker is a griefing tool with extra steps.
   It does hurt the shooter at their own feet, the same as TNT would.
@@ -286,7 +288,9 @@ values — the mod subtracts the player's base 1.0 damage and 4.0 speed for you.
 just newly crafted ones: the recipe stamps only the weapon's id, and the mod applies name,
 lore, attributes and glint on a sweep, comparing a generation counter stored on the item.
 
-The SMP switches live there too: `unique_weapons`, `one_altar_per_weapon`,
+**One legendary per player** (`one_weapon_per_player`): whoever already carries one and
+picks up, crafts, or is given a second has the second dropped at their feet with a note.
+Drop the first to swap. The SMP switches live there too: `unique_weapons`, `one_altar_per_weapon`,
 `announce_forging`, `protect_altars`, `protect_dropped_weapons`. Turn `unique_weapons` off and
 it goes back to being an ordinary kit mod where anyone can craft anything.
 
@@ -320,10 +324,18 @@ time either way. The link and hash live in the config:
 "pack_required": true,
 "pack_kick_message": "This server needs its resource pack. Click Yes on the download prompt, or set Server Resource Packs to Enabled in the server's edit screen.",
 "pack_offer_on_join": true,
-"pack_url": "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.0.0/CustomWeapons-Models.zip",
-"pack_sha1": "7f9a282fac0db5a08e6a4e0a7560ea50c1eb41e1",
+"pack_url": "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.1.0/CustomWeapons-Models.zip",
+"pack_sha1": "d8eef744ca449c55bd9aea289ce8c2ed2cc9a600",
 "pack_offer_message": "This server has 3D models for the legendary weapons. Want them?"
 ```
+
+**Attack animations.** For half a second after an ability fires, the mod counts a frame
+number 1-10 on the held weapon's `custom_model_data` and the pack has one pose per frame:
+a slash for the swords, a lunge for the Gale Edge and Tidecaller, a raise-and-smash for
+the hammer, recoil for the bow and crossbow. Twenty frames a second, first and third
+person, seen by everyone with the pack. `animation_ticks` in the config sets the length,
+0 turns it off; the poses live in `pack/build.py` under `ANIMS`, and the preview's
+**Attack** button plays them.
 
 The hash has to change with the file, or clients keep a stale cached copy. Leave vanilla's
 `resource-pack` lines out of `server.properties`, or players get two prompts.

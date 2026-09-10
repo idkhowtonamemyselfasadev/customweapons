@@ -131,8 +131,9 @@ public final class Weapons {
         stack.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
         // The optional resource pack (pack/) selects a 3D model by this string. A client
         // without the pack ignores it and sees the plain base item as before.
+        float frame = Animations.frameOf(stack);
         stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(
-                List.of(), List.of(), List.of("cw:" + weapon.id()), List.of()));
+                frame > 0 ? List.of(frame) : List.of(), List.of(), List.of("cw:" + weapon.id()), List.of()));
 
         weapon.customise(stack, config);
 
@@ -155,6 +156,7 @@ public final class Weapons {
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             Inventory inventory = player.getInventory();
             int size = Math.min(inventory.getContainerSize(), SWEEP_SLOTS_PER_PLAYER);
+            java.util.List<Integer> carried = new java.util.ArrayList<>();
             for (int slot = 0; slot < size; slot++) {
                 ItemStack stack = inventory.getItem(slot);
                 CustomWeapon weapon = of(stack, config);
@@ -172,7 +174,60 @@ public final class Weapons {
                     stamp(stack, weapon, config, generation);
                     inventory.setChanged();
                 }
+                carried.add(slot);
             }
+            if (config.one_weapon_per_player) {
+                limitToOne(player, inventory, carried, config);
+            }
+        }
+    }
+
+    /**
+     * One legendary per player. The one they were already carrying stays; any other is
+     * dropped at their feet. Nothing is destroyed and nothing is refunded: the item is on
+     * the floor for whoever wants it, which on an SMP is the point of the rule.
+     */
+    private static void limitToOne(ServerPlayer player, Inventory inventory,
+                                   java.util.List<Integer> carried, WeaponsConfig config) {
+        PlayerState state = CustomWeapons.state();
+        if (carried.isEmpty()) {
+            state.setCarrying(player, null);
+            return;
+        }
+        String known = state.carrying(player);
+        int keep = carried.get(0);
+        for (int slot : carried) {
+            CustomWeapon weapon = of(inventory.getItem(slot), config);
+            if (weapon != null && weapon.id().equals(known)) {
+                keep = slot;
+                break;
+            }
+        }
+        CustomWeapon kept = of(inventory.getItem(keep), config);
+        state.setCarrying(player, kept == null ? null : kept.id());
+        for (int slot : carried) {
+            if (slot == keep) {
+                continue;
+            }
+            ItemStack extra = inventory.getItem(slot);
+            CustomWeapon weapon = of(extra, config);
+            inventory.setItem(slot, ItemStack.EMPTY);
+            inventory.setChanged();
+            net.minecraft.world.entity.item.ItemEntity dropped = player.drop(extra, true);
+            if (dropped != null) {
+                dropped.setPickUpDelay(100);
+            }
+            player.sendSystemMessage(Component.literal("You can carry only one legendary at a time. ")
+                    .withStyle(net.minecraft.ChatFormatting.RED)
+                    .append(weapon == null ? Component.literal("It") : weapon.displayName())
+                    .append(Component.literal(" is on the ground; drop ")
+                            .withStyle(net.minecraft.ChatFormatting.RED))
+                    .append(kept == null ? Component.literal("the other") : kept.displayName())
+                    .append(Component.literal(" first if you want to swap.")
+                            .withStyle(net.minecraft.ChatFormatting.RED)));
+            CustomWeapons.LOGGER.info("LIMIT {} dropped {} (carrying {})",
+                    player.getName().getString(), weapon == null ? "?" : weapon.id(),
+                    kept == null ? "?" : kept.id());
         }
     }
 

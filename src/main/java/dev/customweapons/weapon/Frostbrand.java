@@ -97,6 +97,7 @@ public final class Frostbrand extends CustomWeapon {
     @Override
     public void onHit(ServerPlayer attacker, LivingEntity victim, ItemStack weapon,
                       float damageDealt, WeaponsConfig config) {
+        CustomWeapons.animations().play(attacker, this, config);
         int required = victim.getTicksRequiredToFreeze();
         int frozen = victim.getTicksFrozen() + config.frost_ticks_per_hit;
         victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS,

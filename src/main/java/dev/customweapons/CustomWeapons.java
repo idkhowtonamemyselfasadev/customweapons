@@ -55,6 +55,7 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
     private static final Altars ALTARS = new Altars();
     private static final Claims CLAIMS = new Claims();
     private static final PackOffer PACK = new PackOffer();
+    private static final Animations ANIMATIONS = new Animations();
 
     /**
      * Bumped on every config load. Items carry the generation they were stamped at, so a
@@ -85,6 +86,10 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
 
     public static ShockManager shock() {
         return SHOCK;
+    }
+
+    public static Animations animations() {
+        return ANIMATIONS;
     }
 
     public static Projectiles projectiles() {
@@ -152,6 +157,7 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             ServerPlayer player = handler.getPlayer();
             COOLDOWNS.forget(player.getUUID());
+            ANIMATIONS.forget(player.getUUID());
             STATE.forget(player.getUUID());
             BLEED.clear(player.getUUID());
         });
@@ -176,6 +182,7 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
         BLEED.onTick(server, config);
         SHOCK.onTick();
         PROJECTILES.onTick(server, config);
+        ANIMATIONS.onTick(server);
         ALTARS.onTick(server, config);
         int interval = Math.max(1, config.stat_sweep_interval_ticks);
         if (++sweepTick % interval == 0) {

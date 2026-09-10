@@ -77,6 +77,110 @@ def m(name):
     return {"type": "minecraft:model", "model": f"{NS}:item/{name}"}
 
 
+# ------------------------------------------------------------------ animations
+# One motion per weapon, as keyframes of (t 0..1, rotation delta, translation delta, scale
+# factor) applied on top of the weapon's resting first-person pose. First-person axes:
+# +x right, +y up, +z towards the camera, so a thrust is -z. Third person reuses the same
+# keys with the translation halved. The mod counts frames 1..FRAMES over as many ticks.
+FRAMES = 10
+
+ANIMS = {
+    # a wind-up over the shoulder and a cut down through the target
+    "slash": [(0.0, (0, 0, 0), (0, 0, 0), 1.0),
+              (0.2, (-25, 15, 45), (-1.0, 1.5, -1.0), 1.0),
+              (0.55, (35, -30, -75), (2.5, -2.5, -4.0), 1.05),
+              (0.75, (20, -15, -40), (1.5, -1.5, -2.5), 1.0),
+              (1.0, (0, 0, 0), (0, 0, 0), 1.0)],
+    # a pull-back and a lunge along the blade
+    "thrust": [(0.0, (0, 0, 0), (0, 0, 0), 1.0),
+               (0.25, (-10, 0, 10), (0.5, 0.5, 2.0), 1.0),
+               (0.55, (15, 0, -20), (-1.0, -0.5, -7.0), 1.05),
+               (0.8, (5, 0, -5), (-0.3, 0, -2.0), 1.0),
+               (1.0, (0, 0, 0), (0, 0, 0), 1.0)],
+    # raise it high, bring it down hard, bounce
+    "slam": [(0.0, (0, 0, 0), (0, 0, 0), 1.0),
+             (0.3, (-55, 0, 10), (0, 4.0, 1.0), 1.0),
+             (0.55, (70, 0, -25), (0.5, -5.0, -4.0), 1.1),
+             (0.7, (55, 0, -20), (0.5, -4.0, -3.0), 1.0),
+             (1.0, (0, 0, 0), (0, 0, 0), 1.0)],
+    # recoil from the shot and a shake as the lightning goes
+    "shot": [(0.0, (0, 0, 0), (0, 0, 0), 1.0),
+             (0.15, (-20, 5, 0), (0.5, 1.0, 2.0), 1.12),
+             (0.35, (8, -4, 0), (-0.3, 0.2, 0.6), 1.05),
+             (0.55, (-5, 3, 0), (0.2, 0.3, 0.3), 1.02),
+             (1.0, (0, 0, 0), (0, 0, 0), 1.0)],
+    # a heavy kick back into the shoulder
+    "blast": [(0.0, (0, 0, 0), (0, 0, 0), 1.0),
+              (0.15, (-30, 0, 8), (0.5, 1.5, 3.0), 1.15),
+              (0.45, (-8, 0, 2), (0.2, 0.5, 1.0), 1.05),
+              (1.0, (0, 0, 0), (0, 0, 0), 1.0)],
+}
+WEAPON_ANIM = {
+    "bloodletter": "slash", "frostbrand": "slash", "gale_edge": "thrust", "tidecaller": "thrust",
+    "aegis_hammer": "slam", "stormpiercer": "shot", "hellfire": "blast",
+}
+
+
+def lerp(a, b, t):
+    return tuple(x + (y - x) * t for x, y in zip(a, b))
+
+
+def keyframe_at(keys, t):
+    """Smooth (ease in/out) interpolation between the two keys around t."""
+    for (t0, r0, p0, s0), (t1, r1, p1, s1) in zip(keys, keys[1:]):
+        if t0 <= t <= t1:
+            u = 0.0 if t1 == t0 else (t - t0) / (t1 - t0)
+            u = u * u * (3 - 2 * u)
+            return lerp(r0, r1, u), lerp(p0, p1, u), s0 + (s1 - s0) * u
+    return keys[-1][1], keys[-1][2], keys[-1][3]
+
+
+def posed(base, rot, pos, scale, mirror):
+    """A display entry: the resting pose plus a delta, mirrored for the left hand."""
+    rx, ry, rz = rot
+    px, py, pz = pos
+    if mirror:
+        ry, rz, px = -ry, -rz, -px
+    return {
+        "rotation": [round(base["rotation"][0] + rx, 2), round(base["rotation"][1] + ry, 2),
+                     round(base["rotation"][2] + rz, 2)],
+        "translation": [round(base["translation"][0] + px, 3), round(base["translation"][1] + py, 3),
+                        round(base["translation"][2] + pz, 3)],
+        "scale": [round(c * scale, 3) for c in base["scale"]],
+    }
+
+
+def frame_display(display, keys, frame):
+    """Display block for one frame, all four hand contexts."""
+    t = frame / FRAMES
+    rot, pos, scale = keyframe_at(keys, t)
+    third = tuple(c * 0.5 for c in pos)
+    return {
+        "firstperson_righthand": posed(display["firstperson_righthand"], rot, pos, scale, False),
+        "firstperson_lefthand": posed(display["firstperson_lefthand"], rot, pos, scale, True),
+        "thirdperson_righthand": posed(display["thirdperson_righthand"], rot, third, scale, False),
+        "thirdperson_lefthand": posed(display["thirdperson_lefthand"], rot, third, scale, True),
+    }
+
+
+def frame_models(weapon, display):
+    """Tiny models: the resting model as parent, one display block per frame."""
+    keys = ANIMS[WEAPON_ANIM[weapon]]
+    out = {}
+    for frame in range(1, FRAMES + 1):
+        out[f"{weapon}_f{frame}"] = {"parent": f"{NS}:item/{weapon}", "display": frame_display(display, keys, frame)}
+    return out
+
+
+def animated(weapon, idle_tree):
+    """Frame k while the mod has written k into the item, the idle tree otherwise."""
+    return {
+        "type": "minecraft:range_dispatch", "property": "minecraft:custom_model_data", "index": 0,
+        "entries": [{"threshold": k, "model": m(f"{weapon}_f{k}")} for k in range(1, FRAMES + 1)],
+        "fallback": idle_tree,
+    }
+
+
 def weapon_tree(weapon):
     """The model tree used when the stack is this weapon."""
     if weapon == "stormpiercer":
@@ -113,7 +217,7 @@ def item_definitions():
     for base, ws in by_base.items():
         out[base] = {"model": {
             "type": "minecraft:select", "property": "minecraft:custom_model_data", "index": 0,
-            "cases": [{"when": f"cw:{w}", "model": weapon_tree(w)} for w in ws],
+            "cases": [{"when": f"cw:{w}", "model": animated(w, weapon_tree(w))} for w in ws],
             "fallback": VANILLA[base]}}
     return out
 
@@ -139,6 +243,11 @@ def write_pack():
         counts[variant] = n
         with open(os.path.join(models_dir, variant + ".json"), "w") as f:
             json.dump(model, f, separators=(",", ":"))
+    displays = {w: d for w, v, _, d in weapons.VARIANTS if w == v}
+    for weapon, display in displays.items():
+        for name, model in frame_models(weapon, display).items():
+            with open(os.path.join(models_dir, name + ".json"), "w") as f:
+                json.dump(model, f, separators=(",", ":"))
     textures = weapons.textures(NS)
     for weapon, img in textures.items():
         img.save(os.path.join(tex_dir, weapon + ".png"))
@@ -176,7 +285,8 @@ HTML = r"""<!doctype html>
 </head><body>
 <h1>CustomWeapons – 3D weapon models (draft)</h1>
 <p class="hint">Drag to rotate, scroll to zoom. The small grey box is how the item shows in the inventory slot.
-Bow and crossbow have a dropdown for their draw stages.</p>
+Bow and crossbow have a dropdown for their draw stages. <b>Attack</b> plays the weapon's attack animation
+(the motion the pack adds on top of the hand pose for half a second after an ability fires).</p>
 <div class="grid" id="grid"></div>
 <script>
 const DATA = __DATA__;
@@ -260,6 +370,7 @@ for (const g of GROUPS){
   const gui = document.createElement('canvas'); gui.className='gui'; gui.width=128; gui.height=128; row.appendChild(gui);
   const tex = document.createElement('canvas'); tex.className='tex'; tex.width=64; tex.height=64; row.appendChild(tex);
   const meta = document.createElement('div'); meta.className='meta'; row.appendChild(meta);
+  const play = document.createElement('button'); play.textContent = 'Attack'; row.appendChild(play);
   let select = null;
   if (g.variants.length > 1){
     select = document.createElement('select');
@@ -279,6 +390,11 @@ for (const g of GROUPS){
   if (select) select.onchange = () => show(select.value);
 
   let drag = null, rx = 0.35, ry = -0.6, auto = true, dist = 34;
+  // The attack animation: the pack's per-frame pose deltas, played at 20 fps in a loop
+  // of four with a pause, on top of whatever angle the model is turned to.
+  const anim = DATA.anims[g.weapon];
+  let animStart = -1;
+  play.onclick = () => { animStart = performance.now(); };
   canvas.onpointerdown = e => { drag = [e.clientX, e.clientY]; auto = false; canvas.setPointerCapture(e.pointerId); };
   canvas.onpointerup = () => drag = null;
   canvas.onpointermove = e => { if (!drag) return; ry += (e.clientX-drag[0])*0.01; rx += (e.clientY-drag[1])*0.01; drag=[e.clientX,e.clientY]; };
@@ -287,7 +403,26 @@ for (const g of GROUPS){
   function frame(){
     view.resize(); slot.resize();
     if (auto) ry += 0.008;
+    let d = {rot:[0,0,0], pos:[0,0,0], scale:1};
+    if (animStart >= 0){
+      const elapsed = (performance.now() - animStart) / 1000;
+      const cycle = elapsed % 1.2;              // 0.5 s of motion, then a rest
+      if (elapsed > 4.8) animStart = -1;
+      else if (cycle < 0.5){
+        const f = cycle / 0.5 * (anim.frames.length - 1);
+        const i = Math.floor(f), u = f - i, a = anim.frames[i], b = anim.frames[Math.min(i+1, anim.frames.length-1)];
+        d = {rot: a.rot.map((v,k)=>v+(b.rot[k]-v)*u), pos: a.pos.map((v,k)=>v+(b.pos[k]-v)*u), scale: a.scale+(b.scale-a.scale)*u};
+      }
+    }
+    const r = THREE.MathUtils.degToRad;
     view.holder.rotation.set(rx, ry, 0);
+    view.holder.position.set(0,0,0); view.holder.scale.set(1,1,1);
+    if (view.holder.children[0]){
+      const c = view.holder.children[0];
+      c.rotation.set(r(d.rot[0]), r(d.rot[1]), r(d.rot[2]), 'XYZ');
+      c.position.set(d.pos[0], d.pos[1], d.pos[2]);
+      c.scale.set(d.scale, d.scale, d.scale);
+    }
     view.camera.position.set(0,0,dist);
     view.renderer.render(view.scene, view.camera);
     slot.renderer.render(slot.scene, slot.camera);
@@ -309,7 +444,16 @@ def write_preview(models, textures, counts):
     groups = []
     for weapon in BASE_ITEM:
         groups.append({"weapon": weapon, "variants": [v for w, v, _, _ in weapons.VARIANTS if w == weapon]})
-    html = (HTML.replace("__DATA__", json.dumps({"models": models, "textures": tex_data, "counts": counts}))
+    displays = {w: d for w, v, _, d in weapons.VARIANTS if w == v}
+    anims = {}
+    for weapon, display in displays.items():
+        keys = ANIMS[WEAPON_ANIM[weapon]]
+        frames = []
+        for frame in range(0, FRAMES + 1):
+            rot, pos, scale = keyframe_at(keys, frame / FRAMES)
+            frames.append({"rot": rot, "pos": pos, "scale": scale})
+        anims[weapon] = {"name": WEAPON_ANIM[weapon], "frames": frames}
+    html = (HTML.replace("__DATA__", json.dumps({"models": models, "textures": tex_data, "counts": counts, "anims": anims}))
             .replace("__NAMES__", json.dumps(DISPLAY_NAME))
             .replace("__GROUPS__", json.dumps(groups)))
     with open(PREVIEW, "w") as f:

@@ -125,6 +125,7 @@ public final class GaleEdge extends CustomWeapon {
         CustomWeapons.state().grantFallImmunity(player, config.dash_fall_immunity_ticks);
         CustomWeapons.state().armMomentum(player, config.momentum_window_ticks);
         CustomWeapons.cooldowns().set(player, DASH, config.dash_cooldown_ticks, weapon);
+        CustomWeapons.animations().play(player, this, config);
 
         if (player.level() instanceof ServerLevel level) {
             level.playSound(null, player.getX(), player.getY(), player.getZ(),

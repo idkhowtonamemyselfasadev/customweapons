@@ -149,6 +149,7 @@ public final class AegisHammer extends CustomWeapon {
 
         player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, config.slam_resistance_ticks, 0));
         CustomWeapons.cooldowns().set(player, SLAM, config.slam_cooldown_ticks, weapon);
+        CustomWeapons.animations().play(player, this, config);
 
         level.playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.MACE_SMASH_GROUND, SoundSource.PLAYERS, 1.0f, 0.8f);
