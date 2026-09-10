@@ -305,28 +305,28 @@ python3 pack/build.py     # -> release/CustomWeapons-Models.zip and pack/preview
 
 Open `pack/preview.html` in a browser to see every model turning.
 
-**Players are asked in chat.** On join the mod says the server has 3D weapon models and
-shows three buttons: **[Install]** sends the pack (the vanilla download dialog appears),
-**[Not now]** asks again next join, **[Never]** remembers the answer in
+**Players get the vanilla download prompt on join** ("This server requires a custom
+resource pack" with Yes / No). No, a disabled server-pack setting, or a failed download
+kicks them with `pack_kick_message`, which tells them what to change. Vanilla only enforces
+that for a pack set in `server.properties`; a small mixin supplies the same consequence for
+this one, and only for this one, so another mod's optional pack is never touched.
+
+Set `pack_required` to false for the gentle version: a chat question on join with
+**[Install]**, **[Not now]** and **[Never]** buttons, the last remembered per player in
 `world/customweapons-pack-declined.json`. `/weaponpack install` works for anyone at any
-time. Nothing is forced: the pack is sent as optional, so a player who declines the dialog
-just keeps the plain items. The link and hash live in the config:
+time either way. The link and hash live in the config:
 
 ```json
+"pack_required": true,
+"pack_kick_message": "This server needs its resource pack. Click Yes on the download prompt, or set Server Resource Packs to Enabled in the server's edit screen.",
 "pack_offer_on_join": true,
 "pack_url": "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.0.0/CustomWeapons-Models.zip",
 "pack_sha1": "7f9a282fac0db5a08e6a4e0a7560ea50c1eb41e1",
 "pack_offer_message": "This server has 3D models for the legendary weapons. Want them?"
 ```
 
-The hash has to change with the file, or clients keep a stale cached copy. If you would
-rather force the pack on everyone, use vanilla's `resource-pack` and `require-resource-pack`
-in `server.properties` instead and set `pack_offer_on_join` to false. The mod stamps
-`custom_model_data` string `cw:<weapon>` on every weapon; the pack's item definitions select
-the model on that string and fall through to vanilla for everything else. Players without
-the pack see the plain base items exactly as before. Models are sculpted in `pack/weapons.py`
-as voxels on a 32-grid and greedily meshed; every element leans 45 degrees so vanilla's own
-hand transforms apply unchanged.
+The hash has to change with the file, or clients keep a stale cached copy. Leave vanilla's
+`resource-pack` lines out of `server.properties`, or players get two prompts.
 
 ## Adding an eighth weapon
 

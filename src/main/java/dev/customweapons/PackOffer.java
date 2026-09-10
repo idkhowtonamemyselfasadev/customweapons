@@ -8,6 +8,7 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.protocol.common.ClientboundResourcePackPushPacket;
+import net.minecraft.network.protocol.common.ServerboundResourcePackPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.storage.LevelResource;
@@ -73,8 +74,12 @@ public final class PackOffer {
         return config.pack_offer_on_join && config.pack_url != null && !config.pack_url.isBlank();
     }
 
-    /** The chat question, a moment after the join so it lands under the join message. */
+    /** On join: the required dialog, or the chat question, depending on the config. */
     public void onJoin(ServerPlayer player, WeaponsConfig config) {
+        if (config.pack_required && config.pack_url != null && !config.pack_url.isBlank()) {
+            push(player, config, true);
+            return;
+        }
         if (!configured(config) || declined.contains(player.getUUID())) {
             return;
         }
@@ -108,9 +113,7 @@ public final class PackOffer {
             return;
         }
         declined.remove(player.getUUID());
-        player.connection.send(new ClientboundResourcePackPushPacket(PACK_ID, config.pack_url,
-                config.pack_sha1 == null ? "" : config.pack_sha1, false,
-                Optional.of(Component.literal(config.pack_offer_message))));
+        push(player, config, config.pack_required);
         player.sendSystemMessage(Component.literal(
                         "Sending the 3D weapon models. If nothing happens, set this server's "
                                 + "resource pack setting to Prompt or Enabled in the multiplayer menu.")
@@ -118,6 +121,23 @@ public final class PackOffer {
         if (config.log_abilities) {
             CustomWeapons.LOGGER.info("PACK sent to {}", player.getName().getString());
         }
+    }
+
+    private static void push(ServerPlayer player, WeaponsConfig config, boolean required) {
+        player.connection.send(new ClientboundResourcePackPushPacket(PACK_ID, config.pack_url,
+                config.pack_sha1 == null ? "" : config.pack_sha1, required,
+                Optional.of(Component.literal(config.pack_offer_message))));
+    }
+
+    /** Whether this response is about our pack and, under pack_required, a reason to leave. */
+    public static boolean isRefusal(UUID id, ServerboundResourcePackPacket.Action action, WeaponsConfig config) {
+        if (!config.pack_required || !PACK_ID.equals(id)) {
+            return false;
+        }
+        return action == ServerboundResourcePackPacket.Action.DECLINED
+                || action == ServerboundResourcePackPacket.Action.FAILED_DOWNLOAD
+                || action == ServerboundResourcePackPacket.Action.INVALID_URL
+                || action == ServerboundResourcePackPacket.Action.FAILED_RELOAD;
     }
 
     public void never(ServerPlayer player) {
