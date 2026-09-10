@@ -54,6 +54,7 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
     private static final Projectiles PROJECTILES = new Projectiles(COOLDOWNS);
     private static final Altars ALTARS = new Altars();
     private static final Claims CLAIMS = new Claims();
+    private static final PackOffer PACK = new PackOffer();
 
     /**
      * Bumped on every config load. Items carry the generation they were stamped at, so a
@@ -105,6 +106,7 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             ALTARS.load(server);
             CLAIMS.load(server);
+            PACK.load(server);
             LOGGER.info("CustomWeapons ready: {} weapons craftable, {} altars known",
                     Weapons.ALL.stream().filter(w -> w.enabled(config)).count(), ALTARS.count());
         });
@@ -145,6 +147,8 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
                 item.setInvulnerable(true);
             }
         });
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
+                PACK.onJoin(handler.getPlayer(), config));
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             ServerPlayer player = handler.getPlayer();
             COOLDOWNS.forget(player.getUUID());
@@ -323,6 +327,25 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
     }
 
     private void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+        // Open to everyone: these are the answers to the chat question on join.
+        dispatcher.register(Commands.literal("weaponpack")
+                .executes(context -> {
+                    PACK.install(context.getSource().getPlayerOrException(), config);
+                    return 1;
+                })
+                .then(Commands.literal("install").executes(context -> {
+                    PACK.install(context.getSource().getPlayerOrException(), config);
+                    return 1;
+                }))
+                .then(Commands.literal("later").executes(context -> {
+                    PACK.later(context.getSource().getPlayerOrException());
+                    return 1;
+                }))
+                .then(Commands.literal("never").executes(context -> {
+                    PACK.never(context.getSource().getPlayerOrException());
+                    return 1;
+                })));
+
         // One literal per weapon, so the command tab-completes the ids without needing a
         // custom argument type registered on both sides of the connection.
         var targets = Commands.argument("targets", EntityArgument.players());

@@ -155,6 +155,15 @@ public final class WeaponsConfig {
     /** A dropped legendary neither burns nor despawns. */
     public boolean protect_dropped_weapons = true;
 
+    // -------------------------------------------------------------- resource pack
+    /** Ask each player in chat, on join, whether they want the 3D weapon models. */
+    public boolean pack_offer_on_join = true;
+    /** A direct download link to the pack zip. A GitHub release asset works. */
+    public String pack_url = "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.0.0/CustomWeapons-Models.zip";
+    /** SHA-1 of that zip. Change it with the file, or clients keep a stale cached copy. */
+    public String pack_sha1 = "7f9a282fac0db5a08e6a4e0a7560ea50c1eb41e1";
+    public String pack_offer_message = "This server has 3D models for the legendary weapons. Want them?";
+
     // ----------------------------------------------------------------------- misc
     /** How often held/carried weapons are re-stamped with their stats, in ticks. */
     public int stat_sweep_interval_ticks = 5;

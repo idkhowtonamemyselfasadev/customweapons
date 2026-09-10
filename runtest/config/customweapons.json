@@ -58,8 +58,8 @@
   "slam_resistance_ticks": 100,
   "slam_knock_up": 0.35,
   "slam_knock_out": 0.4,
-  "unique_weapons": true,
-  "altars_enabled": true,
+  "unique_weapons": false,
+  "altars_enabled": false,
   "altar_spacing_chunks": 6,
   "stat_sweep_interval_ticks": 5,
   "log_abilities": true
