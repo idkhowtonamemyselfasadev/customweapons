@@ -100,6 +100,28 @@ public final class Animations {
         return true;
     }
 
+    /** Whether this player's animation is running on this weapon right now. */
+    public boolean isPlaying(UUID player, String weaponId) {
+        Playing anim = playing.get(player);
+        return anim != null && anim.weaponId.equals(weaponId);
+    }
+
+    /**
+     * Removes a leftover frame. If the weapon leaves the main hand mid-animation - a slot
+     * switch, a knock from a lightning strike, a death - the tick loop cannot reach it and
+     * the frame would stay on the item for good, drawn as a sword stuck mid-swing. The
+     * inventory sweep calls this for any weapon that is not animating.
+     */
+    public static boolean clearFrame(ItemStack stack) {
+        CustomModelData data = stack.get(DataComponents.CUSTOM_MODEL_DATA);
+        if (data == null || data.floats().isEmpty()) {
+            return false;
+        }
+        stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(
+                List.of(), data.flags(), data.strings(), data.colors()));
+        return true;
+    }
+
     /** Whether a stack is mid-animation, so a re-stamp keeps its frame. */
     public static float frameOf(ItemStack stack) {
         CustomModelData data = stack.get(DataComponents.CUSTOM_MODEL_DATA);

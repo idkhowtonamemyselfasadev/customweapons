@@ -174,6 +174,12 @@ public final class Weapons {
                     stamp(stack, weapon, config, generation);
                     inventory.setChanged();
                 }
+                // A frame is only legitimate on the main-hand item while its animation runs.
+                boolean animating = stack == player.getMainHandItem()
+                        && CustomWeapons.animations().isPlaying(player.getUUID(), weapon.id());
+                if (!animating && Animations.clearFrame(stack)) {
+                    inventory.setChanged();
+                }
                 carried.add(slot);
             }
             if (config.one_weapon_per_player) {
