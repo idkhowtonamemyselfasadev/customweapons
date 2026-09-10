@@ -3,7 +3,7 @@
   "id": "customweapons",
   "version": "${version}",
   "name": "Custom Weapons",
-  "description": "Four craftable weapons with abilities: the Bloodletter, the Gale Edge, the Stormpiercer and the Aegis Hammer. Server-side only - players join with a completely vanilla client and install nothing.",
+  "description": "Seven craftable legendary weapons with abilities, temples that forge them, and an optional 3D model pack. Server-side only - players join with a completely vanilla client.",
   "authors": [
     "Tim"
   ],
@@ -14,6 +14,9 @@
       "dev.customweapons.CustomWeapons"
     ]
   },
+  "mixins": [
+    "customweapons.mixins.json"
+  ],
   "depends": {
     "fabricloader": ">=0.16.0",
     "minecraft": "~1.21.11",

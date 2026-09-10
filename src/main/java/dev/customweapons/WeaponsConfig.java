@@ -156,7 +156,14 @@ public final class WeaponsConfig {
     public boolean protect_dropped_weapons = true;
 
     // -------------------------------------------------------------- resource pack
-    /** Ask each player in chat, on join, whether they want the 3D weapon models. */
+    /**
+     * Push the pack to every player on join with the vanilla "download or leave" dialog.
+     * A player who clicks No, has server packs disabled, or whose download fails is
+     * kicked with {@code pack_kick_message}. Off, the mod asks politely in chat instead.
+     */
+    public boolean pack_required = true;
+    public String pack_kick_message = "This server needs its resource pack. Click Yes on the download prompt, or set Server Resource Packs to Enabled in the server's edit screen.";
+    /** With pack_required off: ask each player in chat, on join, whether they want the models. */
     public boolean pack_offer_on_join = true;
     /** A direct download link to the pack zip. A GitHub release asset works. */
     public String pack_url = "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.0.0/CustomWeapons-Models.zip";

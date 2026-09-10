@@ -44,8 +44,32 @@ waitfor 'Done \(' 180 || { tail -30 test.log; exit 1; }
 waitfor 'CustomWeapons ready' 15 || { tail -30 test.log; exit 1; }
 grep -E "CustomWeapons ready" test.log
 
-PORT="$PORT" node test-pack.js 2>&1 | grep -vE "^Chunk size is|^PartialReadError|^\s+at |DeprecationWarning|trace-deprecation" | tee pack.log
-RESULT=${PIPESTATUS[0]}
+NOISE='^Chunk size is|^PartialReadError|^\s+at |DeprecationWarning|trace-deprecation'
+RESULT=0
+
+echo
+echo "=========== MIXIN / BOOT ==========="
+if grep -iE "mixin" test.log | grep -iE "error|exception|failed|could not|unable" ; then
+    echo "!! FAIL  mixin errors in the server log"; RESULT=1
+else
+    echo "   PASS  no mixin errors during boot"
+fi
+
+echo
+echo "=========== PHASE 1: pack_required = true (default) ==========="
+PORT="$PORT" node test-pack-required.js 2>&1 | grep -vE "$NOISE" | tee pack.log
+[ "${PIPESTATUS[0]}" = 0 ] || RESULT=1
+echo "--- server log ---"
+grep -E "PACK |Refuser|Accepter" test.log | grep -vE "logged in|joined the game|left the game"
+
+echo
+echo "=========== PHASE 2: pack_required = false, live reload, chat offer ==========="
+sed -i 's/^  "log_abilities": true$/  "pack_required": false,\n  "log_abilities": true/' config/customweapons.json
+grep -q '"pack_required": false' config/customweapons.json || { echo "!! config edit failed"; exit 1; }
+echo "customweapon reload" >&3
+waitfor 'config reloaded' 10 || RESULT=1
+PORT="$PORT" node test-pack.js 2>&1 | grep -vE "$NOISE" | tee -a pack.log
+[ "${PIPESTATUS[0]}" = 0 ] || RESULT=1
 
 echo
 echo "=========== SERVER LOG ==========="
