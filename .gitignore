@@ -1,0 +1,15 @@
+build/
+.gradle/
+run/
+runtest/world/
+runtest/logs/
+runtest/libraries/
+runtest/versions/
+runtest/mods/
+runtest/*.jar
+runtest/*.log
+runtest/usercache.json
+runtest/console.fifo
+pack/ref/
+pack/customweapons-models/
+__pycache__/

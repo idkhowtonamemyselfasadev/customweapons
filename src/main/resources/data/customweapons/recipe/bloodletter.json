@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "ABA",
+    "BWB",
+    "ACA"
+  ],
+  "key": {
+    "A": "minecraft:ghast_tear",
+    "B": "minecraft:wither_skeleton_skull",
+    "W": "minecraft:netherite_sword",
+    "C": "minecraft:netherite_ingot"
+  },
+  "result": {
+    "id": "minecraft:netherite_sword",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": {
+        "cw_weapon": "bloodletter"
+      }
+    }
+  }
+}

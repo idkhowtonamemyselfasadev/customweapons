@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "ABA",
+    "BWB",
+    "ACA"
+  ],
+  "key": {
+    "A": "minecraft:nautilus_shell",
+    "B": "minecraft:sea_lantern",
+    "W": "minecraft:trident",
+    "C": "minecraft:conduit"
+  },
+  "result": {
+    "id": "minecraft:trident",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": {
+        "cw_weapon": "tidecaller"
+      }
+    }
+  }
+}

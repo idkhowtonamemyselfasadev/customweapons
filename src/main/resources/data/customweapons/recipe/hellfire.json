@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "ABA",
+    "BWB",
+    "ACA"
+  ],
+  "key": {
+    "A": "minecraft:blaze_rod",
+    "B": "minecraft:magma_block",
+    "W": "minecraft:crossbow",
+    "C": "minecraft:nether_star"
+  },
+  "result": {
+    "id": "minecraft:crossbow",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": {
+        "cw_weapon": "hellfire"
+      }
+    }
+  }
+}
