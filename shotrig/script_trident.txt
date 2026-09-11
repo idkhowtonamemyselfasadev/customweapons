@@ -1,0 +1,23 @@
+wait 60
+cmd gamemode survival
+cmd time set 6000
+cmd weather clear
+cmd kill @e[type=!player]
+cmd tp @s 0.5 -60 0.5 0 12
+cmd clear @s
+cmd item replace entity @s hotbar.0 with minecraft:trident[custom_model_data={strings:["cw:tidecaller"]}]
+cmd item replace entity @s hotbar.1 with minecraft:trident
+cmd item replace entity @s hotbar.2 with minecraft:netherite_sword[custom_model_data={strings:["cw:bloodletter"]}]
+wait 20
+look 0 12
+hotbar 0
+wait 15
+shot t1_tidecaller
+hotbar 1
+wait 15
+shot t2_vanilla_trident
+hotbar 2
+wait 15
+shot t3_bloodletter
+wait 5
+quit

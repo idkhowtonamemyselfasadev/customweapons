@@ -79,6 +79,11 @@ public final class WeaponsConfig {
      * only and the shock's own damage is all that lands.
      */
     public boolean shock_lightning_fire = false;
+    /**
+     * A shocked target is stunned: rooted where it stands, unable to move or jump, for
+     * this many ticks. 40 is two seconds, the same as the cage. 0 turns it off.
+     */
+    public int shock_stun_ticks = 40;
     /** Entity types a fully drawn hit kills outright, whatever their health. */
     public java.util.List<String> shock_instakill =
             java.util.List.of("minecraft:creeper", "minecraft:skeleton");
@@ -110,8 +115,10 @@ public final class WeaponsConfig {
     public int frost_slowness_ticks = 40;
     public int frost_slowness_amplifier = 1;
     public double shatter_damage = 8.0;
-    public int shatter_slowness_ticks = 40;
+    /** How long a shattered target stays frozen solid (rooted), and the pause before the frost can build again. */
+    public int shatter_slowness_ticks = 60;
     public int shatter_slowness_amplifier = 3;
+    public int shatter_cooldown_ticks = 100;
 
     // ----------------------------------------------------------------- Tidecaller
     public boolean tidecaller_enabled = true;
@@ -178,9 +185,9 @@ public final class WeaponsConfig {
     /** With pack_required off: ask each player in chat, on join, whether they want the models. */
     public boolean pack_offer_on_join = true;
     /** A direct download link to the pack zip. A GitHub release asset works. */
-    public String pack_url = "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.2.0/CustomWeapons-Models.zip";
+    public String pack_url = "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.2.1/CustomWeapons-Models.zip";
     /** SHA-1 of that zip. Change it with the file, or clients keep a stale cached copy. */
-    public String pack_sha1 = "0cf8646982e687ce2813ddd38a8b59b6426f0c1a";
+    public String pack_sha1 = "2dd32bea93bdc4e37be62da8fb4b34405f60a12c";
     public String pack_offer_message = "This server has 3D models for the legendary weapons. Want them?";
 
     // --------------------------------------------------------------- world effects

@@ -42,6 +42,7 @@ cat > config/customweapons.json <<'JSON'
   "shock_chain_damage": 3.0,
   "shock_lightning": true,
   "shock_lightning_fire": false,
+  "shock_stun_ticks": 40,
   "shock_instakill": ["minecraft:creeper", "minecraft:skeleton"],
   "frostbrand_enabled": true,
   "frostbrand_attack_damage": 8.0,
@@ -154,6 +155,7 @@ assert_log "exactly one arrow armed per ready full draw (${FULL_DRAWS:-?} fired)
 assert_log "the shock landed"                       "ABILITY shock hit"               -ge 1
 assert_log "the shock on Dummy was the +6.0 bonus alone, nothing chained" \
            "ABILITY shock hit victim=Dummy chained=none total=6.0"            -ge 1
+assert_log "the shock stunned the target"          "ABILITY stun victim=Dummy ticks=40" -ge 1
 assert_log "the shock executed a creeper"           "ABILITY shock hit victim=Creeper .* executed=true" -ge 1
 assert_log "frost stacked on a target"              "ABILITY frost"                   -ge 2
 assert_log "the shatter fired"                      "ABILITY shatter"                 -ge 1

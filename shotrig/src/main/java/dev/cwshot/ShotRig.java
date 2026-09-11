@@ -79,11 +79,12 @@ public final class ShotRig implements ClientModInitializer {
             return;
         }
         if (holdLeft > 0) {
+            // Held in the background: the script keeps running, so a screenshot can be
+            // taken mid-draw. Released when the count runs out.
             mc.options.keyUse.setDown(true);
             if (--holdLeft == 0) {
                 mc.options.keyUse.setDown(false);
             }
-            return;
         }
         if (wait > 0) {
             wait--;

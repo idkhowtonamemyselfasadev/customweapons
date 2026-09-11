@@ -36,6 +36,7 @@ import java.util.List;
  * nothing to clean up: the counter lives on the entity.
  */
 public final class Frostbrand extends CustomWeapon {
+    private static final String SHATTER = "frostbrand_shatter";
 
     @Override
     public String id() {
@@ -65,9 +66,10 @@ public final class Frostbrand extends CustomWeapon {
                 Weapons.loreLine(String.format("Frost: every hit chills and slows for %.0fs",
                         config.frost_slowness_ticks / 20.0)),
                 Weapons.loreLine("Three quick hits freeze the target solid"),
-                Weapons.loreLine(String.format("Shatter: a frozen target takes +%.1f and is rooted",
-                        config.shatter_damage)),
-                Weapons.loreLine("The frost thaws if you stop swinging"));
+                Weapons.loreLine(String.format("Shatter: a frozen target takes +%.1f and is frozen solid for %.0fs",
+                        config.shatter_damage, config.shatter_slowness_ticks / 20.0)),
+                Weapons.loreLine(String.format("Cooldown %.0fs after a shatter - the frost thaws if you stop swinging",
+                        config.shatter_cooldown_ticks / 20.0)));
     }
 
     @Override
@@ -98,10 +100,19 @@ public final class Frostbrand extends CustomWeapon {
     public void onHit(ServerPlayer attacker, LivingEntity victim, ItemStack weapon,
                       float damageDealt, WeaponsConfig config) {
         CustomWeapons.animations().play(attacker, this, config);
-        int required = victim.getTicksRequiredToFreeze();
-        int frozen = victim.getTicksFrozen() + config.frost_ticks_per_hit;
         victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS,
                 config.frost_slowness_ticks, config.frost_slowness_amplifier));
+        // After a shatter the blade needs a moment before the frost builds again: hits still
+        // chill and slow, but the freeze counter stays where the thaw leaves it.
+        int cooldown = CustomWeapons.cooldowns().remaining(attacker, SHATTER);
+        if (cooldown > 0) {
+            attacker.displayClientMessage(Component.literal(
+                            String.format("Frost  %.1fs", cooldown / 20.0))
+                    .withStyle(ChatFormatting.GRAY), true);
+            return;
+        }
+        int required = victim.getTicksRequiredToFreeze();
+        int frozen = victim.getTicksFrozen() + config.frost_ticks_per_hit;
 
         if (frozen < required) {
             victim.setTicksFrozen(frozen);
@@ -126,6 +137,7 @@ public final class Frostbrand extends CustomWeapon {
         // Frozen solid: the shatter. Back to zero afterwards, so the next three hits are a
         // new build-up rather than a shatter every swing.
         victim.setTicksFrozen(0);
+        CustomWeapons.cooldowns().set(attacker, SHATTER, config.shatter_cooldown_ticks, weapon);
         Hurt.deal(victim, victim.damageSources().indirectMagic(attacker, attacker),
                 (float) config.shatter_damage);
         victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS,
@@ -133,7 +145,7 @@ public final class Frostbrand extends CustomWeapon {
         if (victim.level() instanceof ServerLevel level) {
             // The ice closes around them for as long as they are rooted, then bursts.
             CustomWeapons.effects().play(level, "frost_shatter", victim);
-            CustomWeapons.effects().later(41, () -> {
+            CustomWeapons.effects().later(config.shatter_slowness_ticks + 1, () -> {
                 if (!victim.isRemoved()) {
                     level.sendParticles(new net.minecraft.core.particles.BlockParticleOption(
                                     ParticleTypes.BLOCK, net.minecraft.world.level.block.Blocks.ICE.defaultBlockState()),

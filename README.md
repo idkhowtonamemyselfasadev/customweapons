@@ -21,7 +21,7 @@ Built and verified against a real 1.21.11 dedicated server — see [Testing](#te
 | **Gale Edge** | diamond sword | 7.0 | 1.8 | 12.6, +4.0 after a dash | 8 s |
 | **Stormpiercer** | bow | 10.0 full draw, +6.0 lightning | — | — | 30 s |
 | **Aegis Hammer** | netherite axe | 11.0 | 0.9 | 9.9, slam 8.0 | 15 s |
-| **Frostbrand** | iron sword | 8.0 | 1.6 | 12.8, shatter +8.0 | none |
+| **Frostbrand** | iron sword | 8.0 | 1.6 | 12.8, shatter +8.0 | 5 s after a shatter (target frozen 3 s) |
 | **Tidecaller** | trident | 10.0 | 1.1 | 11.0, +4.0 wet | 10 s |
 | **Hellfire** | crossbow | bolt + blast | — | — | 8 s |
 
@@ -57,6 +57,8 @@ counterpart on raw damage, and the ability is on top. All of it is in the config
   **calls a lightning bolt down on the target**, applies Glowing for 6 s, and chains to one
   other entity within 5 blocks for 3.0. Then **30 s** of cooldown, charged on the hit; the
   bow still hits for 10 meanwhile and the action bar shows the time left.
+- The shocked target is **stunned for 2 s** (`shock_stun_ticks`): rooted where it stands,
+  unable to move or jump, while the lightning rods circle it.
 - A fully drawn hit **kills a creeper or a skeleton outright** (`shock_instakill`, a list of
   entity ids, never players). The kill goes through the normal death path, so it is credited
   to the shooter and drops loot and experience.
@@ -324,8 +326,8 @@ time either way. The link and hash live in the config:
 "pack_required": true,
 "pack_kick_message": "This server needs its resource pack. Click Yes on the download prompt, or set Server Resource Packs to Enabled in the server's edit screen.",
 "pack_offer_on_join": true,
-"pack_url": "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.2.0/CustomWeapons-Models.zip",
-"pack_sha1": "0cf8646982e687ce2813ddd38a8b59b6426f0c1a",
+"pack_url": "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.2.1/CustomWeapons-Models.zip",
+"pack_sha1": "2dd32bea93bdc4e37be62da8fb4b34405f60a12c",
 "pack_offer_message": "This server has 3D models for the legendary weapons. Want them?"
 ```
 
