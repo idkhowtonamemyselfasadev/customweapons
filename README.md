@@ -1,8 +1,9 @@
 # Custom Weapons
 
-Seven craftable weapons with abilities for **Minecraft 1.21.11 Fabric**. Built for an SMP:
-**one of each weapon exists on the whole world**, forged once, at one of ten temples that
-generate somewhere out in the wild.
+Ten craftable weapons with abilities for **Minecraft 1.21.11 Fabric**. Built for an SMP:
+**three of each weapon exist on the whole world**, forged at temples that generate out in
+the wild - three temples per weapon, one of them within reach of the spawn - and a temple
+that has forged its weapon crumbles behind you.
 
 **Players install nothing.** The mod is server-side only: no client entrypoint, no new
 registry entries, no custom recipe serializer, no resource pack. Everyone joins with a
@@ -254,7 +255,16 @@ balance — it is the route for players who never learn the recipe.
 - **Placement is deterministic from the world seed**, one temple per square of
   `altar_spacing_chunks` (default 24, roughly one every 400 blocks), the way vanilla spaces
   its structures. The same seed always makes the same map, and two are never neighbours.
-- **Only newly generated chunks.** Land you have already explored will not sprout temples.
+- **Only newly generated chunks.** Land you have already explored will not sprout temples
+  (`/customweapon altar seed` covers a pre-generated world).
+- **Three temples per weapon** (`altars_per_weapon`), and **one of the three near the spawn**
+  (`altar_near_spawn_radius`, 1200 blocks): a region inside the radius goes to a weapon that
+  still lacks its near temple, and a region outside never takes a weapon's last temple while
+  its near one is owed. So every weapon has a temple a new player can walk to, and two more
+  that take an expedition.
+- **A used temple is gone.** Forge at it once and it crumbles: every block from the floor up
+  goes, the labels go, and the ground beside it fills the footprint in. The site stays on
+  file as spent so its chunk never grows a replacement.
 - The pillars say which weapon: red nether brick and redstone for the Bloodletter, calcite and
   packed ice for the Gale Edge, copper and amethyst for the Stormpiercer, blackstone and
   gilded blackstone for the Aegis Hammer.
@@ -280,7 +290,7 @@ which is how an altar recorded under an older, smaller design gets its temple.
 
 Everything below is on by default and each part has its own switch in the config.
 
-### One of each weapon, ever
+### Three of each weapon, ever
 
 A world holds one Bloodletter, one Gale Edge, one Stormpiercer and one Aegis Hammer. The
 first one made is stamped with a serial, and that serial is recorded in
@@ -294,19 +304,23 @@ Anyone who crafts a second one gets the plain base item back and **their materia
 with a line telling them who beat them to it. Taking somebody's three wither skulls for an
 item they cannot keep would be robbery rather than a rule, so the refund is not optional.
 
-An altar whose weapon is already made is **spent, not broken**: it stays standing and names
-whoever forged it. The temple becomes a monument.
+The cap is `weapon_copies` (3): three temples, three forgings, or any mix of temple and
+crafting table, and the announcement says which of the three was just made. An altar for a
+weapon the world is already full of is **spent**: it names who forged them and crumbles like
+a used one.
 
 - `/customweapon claims` — what has been forged, by whom, with serials
-- `/customweapon unclaim weapon <weapon>` — release one so it can be made again, for the
-  legendary that went into a lava pit. If the original still exists in somebody's inventory it
+- `/customweapon unclaim weapon <weapon>` — release the most recent one so another can be
+  made, for the legendary that went into a lava pit. If the original still exists in somebody's inventory it
   simply re-claims itself on the next sweep, so an unclaim by mistake is not a duplication bug.
 
-### One temple per weapon
+### Three temples per weapon
 
-With `one_altar_per_weapon`, once a weapon's temple exists somewhere in the world no second
-one is ever built. A world ends up with exactly ten landmarks and finding them is the
-content. Placement is still seed-deterministic and only in newly generated chunks.
+With `altars_per_weapon` at 3, a weapon gets three temples and then no more, spent ones
+included. A world ends up with thirty landmarks, ten of them within `altar_near_spawn_radius`
+of the spawn, and finding the far ones is the content. Placement is still seed-deterministic
+and only in newly generated chunks. Set `altars_per_weapon` to 0 for no limit, and
+`altar_near_spawn_radius` to 0 to let them fall where they may.
 
 ### The rest of the SMP pass
 
@@ -364,7 +378,8 @@ lore, attributes and glint on a sweep, comparing a generation counter stored on 
 
 **One legendary per player** (`one_weapon_per_player`): whoever already carries one and
 picks up, crafts, or is given a second has the second dropped at their feet with a note.
-Drop the first to swap. The SMP switches live there too: `unique_weapons`, `one_altar_per_weapon`,
+Drop the first to swap. The SMP switches live there too: `unique_weapons` with `weapon_copies`,
+`altars_per_weapon`, `altar_near_spawn_radius`,
 `announce_forging`, `protect_altars` (the whole temple: no survival mining, no explosion, no block-breaking mob; creative is exempt), `protect_dropped_weapons`. Turn `unique_weapons` off and
 it goes back to being an ordinary kit mod where anyone can craft anything.
 
@@ -461,10 +476,13 @@ packets. It asserts on both what the clients received and what the server logged
 - one arrow is armed by a full draw and none by a partial draw, and the shock lands
 - the Stormpiercer refuses to be enchanted
 - `/customweapon reload` re-stats a weapon already in an inventory
-- the first weapon is handed out and announced to everyone; a second cannot be given by
-  command; a second **crafted** one reverts to a plain sword with the materials refunded and
-  the reason explained; `/customweapon unclaim` opens it up again
-- a spent altar names whoever forged the weapon and takes nothing
+- the first weapon is handed out and announced to everyone as "1 of 3"; the second and
+  third go out and the third is announced as the last; a fourth cannot be given by command;
+  a fourth **crafted** one reverts to a plain sword with the materials refunded and the
+  reason explained; `/customweapon unclaim` opens one slot up again
+- a used altar crumbles: lodestone, temple and labels gone, the footprint covered by the
+  ground beside it and mineable again; three temples forge three Bloodletters in turn; a
+  fourth temple is spent - it names whoever forged them, takes nothing, and crumbles too
 - the altar block cannot be mined
 - the temple is a real build: 680+ structural blocks, 8 hanging lanterns on 16 chains, 4
   braziers, and 68 pillar blocks in the weapon's colour
@@ -472,7 +490,10 @@ packets. It asserts on both what the clients received and what the server logged
 - an altar lists what is missing, refuses a payment one wither skull short, forges the weapon
   once the full price is in hand, takes the materials, and refuses to spend a crafted
   Bloodletter as its own base item
-- altars generate in newly generated chunks (50 of them, in the run above)
+- altars generate in newly generated chunks
+- `runtest/run-seed-test.sh`: `/customweapon altar seed 600` on a flat world builds exactly
+  30 temples, 3 per weapon, one of each within 250 blocks of the spawn and the rest beyond
+  it; a second run builds nothing; every temple has its lodestone and five labels
 - an enchantment forced onto the Stormpiercer with `/enchant` does not stick
 
 ### Running a server to play on

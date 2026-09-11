@@ -54,8 +54,13 @@ import java.util.Random;
  */
 public final class Altars {
 
-    /** One site: the lodestone's position and the weapon that altar forges. */
-    public record Site(String weapon, int x, int y, int z) {
+    /**
+     * One site: the lodestone's position and the weapon that altar forges.
+     *
+     * @param nearSpawn built inside {@code altar_near_spawn_radius} of the world spawn
+     * @param spent     used and taken down; kept on file so its chunk never grows another
+     */
+    public record Site(String weapon, int x, int y, int z, boolean nearSpawn, boolean spent) {
     }
 
     private static final int SALT = 0x41_4C_54_52;   // "ALTR"
@@ -146,8 +151,9 @@ public final class Altars {
      * a world does not load anything for the mod to see. This walks every region within the
      * radius, loads its candidate chunk, and lets the usual placement run - so the result is
      * exactly the set of altars the world would have grown on its own. Regions are visited
-     * in a seeded shuffle rather than in rings, so the one-per-weapon temples end up spread
-     * across the map instead of clustered around the player.
+     * in a seeded shuffle rather than in rings, so the temples end up spread across the map
+     * instead of clustered around the player - except each weapon's near-spawn one, which
+     * the placement rules keep inside {@code altar_near_spawn_radius}.
      *
      * @return how many altars were built
      */
@@ -180,9 +186,10 @@ public final class Altars {
             } catch (Exception e) {
                 CustomWeapons.LOGGER.error("Altar seeding failed at {}: {}", chunk, e.toString());
             }
-            if (config.one_altar_per_weapon && Weapons.ALL.stream()
-                    .filter(w -> w.enabled(config)).allMatch(w -> hasAltarFor(w.id()))) {
-                break;   // every weapon has its temple; nothing more would be built
+            if (config.altars_per_weapon > 0 && Weapons.ALL.stream()
+                    .filter(w -> w.enabled(config))
+                    .allMatch(w -> templesBuilt(w.id()) >= config.altars_per_weapon)) {
+                break;   // every weapon has all its temples; nothing more would be built
             }
         }
         save();
@@ -209,20 +216,15 @@ public final class Altars {
             }
         }
 
-        List<CustomWeapon> candidates = Weapons.ALL.stream()
-                .filter(w -> w.enabled(config))
-                // One temple per weapon: once a weapon's temple exists somewhere, no second
-                // one is ever built, so a world ends up with exactly four landmarks and
-                // finding them is the content.
-                .filter(w -> !config.one_altar_per_weapon || !hasAltarFor(w.id()))
-                .toList();
+        int x = chunk.getMinBlockX() + 8;
+        int z = chunk.getMinBlockZ() + 8;
+        boolean near = nearSpawn(level, x, z, config);
+        List<CustomWeapon> candidates = candidates(config, near);
         if (candidates.isEmpty()) {
             return;
         }
         CustomWeapon weapon = candidates.get(random.nextInt(candidates.size()));
 
-        int x = chunk.getMinBlockX() + 8;
-        int z = chunk.getMinBlockZ() + 8;
         int surface = level.getHeight(Heightmap.Types.WORLD_SURFACE_WG, x, z);
         BlockPos floor = new BlockPos(x, surface, z);
         BlockPos altar = floor.above(ALTAR_HEIGHT);
@@ -237,7 +239,7 @@ public final class Altars {
             return;
         }
         build(level, floor, weapon);
-        Site site = new Site(weapon.id(), altar.getX(), altar.getY(), altar.getZ());
+        Site site = new Site(weapon.id(), altar.getX(), altar.getY(), altar.getZ(), near, false);
         sites.put(key(site.x(), site.y(), site.z()), site);
         dirty = true;
         ensureLabels(level, site);
@@ -522,7 +524,7 @@ public final class Altars {
     /** Re-labels any altar in a chunk that has just come back. */
     private void labelSitesIn(ServerLevel level, ChunkPos chunk) {
         boolean any = false;
-        for (Site site : sites.values()) {
+        for (Site site : all()) {
             if (SectionPos.blockToSectionCoord(site.x()) == chunk.x
                     && SectionPos.blockToSectionCoord(site.z()) == chunk.z) {
                 any = true;
@@ -538,7 +540,7 @@ public final class Altars {
             pending.add(chunk);
             return;
         }
-        for (Site site : new ArrayList<>(sites.values())) {
+        for (Site site : all()) {
             if (SectionPos.blockToSectionCoord(site.x()) == chunk.x
                     && SectionPos.blockToSectionCoord(site.z()) == chunk.z) {
                 ensureLabels(level, site);
@@ -546,12 +548,17 @@ public final class Altars {
         }
     }
 
-    /** Builds an altar under a player's feet, for {@code /customweapon altar}. */
+    /**
+     * Builds an altar where a player stands, for {@code /customweapon altar place}. The floor
+     * goes in at their feet, the way a natural temple sits on the first air layer above the
+     * ground - so a temple placed, used and placed again lands in the same blocks.
+     */
     public Site placeAt(ServerLevel level, BlockPos feet, CustomWeapon weapon) {
-        BlockPos floor = feet.below();
+        BlockPos floor = feet;
         build(level, floor, weapon);
         BlockPos altar = floor.above(ALTAR_HEIGHT);
-        Site site = new Site(weapon.id(), altar.getX(), altar.getY(), altar.getZ());
+        Site site = new Site(weapon.id(), altar.getX(), altar.getY(), altar.getZ(),
+                nearSpawn(level, altar.getX(), altar.getZ(), CustomWeapons.config()), false);
         sites.put(key(site.x(), site.y(), site.z()), site);
         dirty = true;
         ensureLabels(level, site);
@@ -565,7 +572,7 @@ public final class Altars {
     public Site siteAt(BlockPos pos) {
         for (int up = 0; up <= 2; up++) {
             Site site = sites.get(key(pos.getX(), pos.getY() + up, pos.getZ()));
-            if (site != null) {
+            if (site != null && !site.spent()) {
                 return site;
             }
         }
@@ -585,17 +592,18 @@ public final class Altars {
             return true;
         }
         Claims claims = CustomWeapons.claims();
-        if (config.unique_weapons && claims.isClaimed(weapon.id())) {
-            // Spent, not broken. The temple stays as a monument to whoever got there first.
-            Claims.Claim claim = claims.claimOf(weapon.id());
+        if (config.unique_weapons && claims.isFull(weapon.id(), config.weapon_copies)) {
+            // The world already holds all of this weapon it will ever hold, so this temple
+            // can forge nothing. A temple that forges nothing is a trap for the next
+            // expedition, so it goes the way a used one does.
             player.displayClientMessage(Component.literal("The altar is spent. ")
                     .withStyle(ChatFormatting.GRAY)
                     .append(weapon.displayName())
-                    .append(Component.literal(" was forged by " + claim.owner())
+                    .append(Component.literal(" was forged by " + claims.owners(weapon.id())
+                            + "; there will be no more. The temple crumbles.")
                             .withStyle(ChatFormatting.GRAY)), false);
             if (player.level() instanceof ServerLevel level) {
-                level.playSound(null, site.x(), site.y(), site.z(),
-                        SoundEvents.NOTE_BLOCK_BASS.value(), SoundSource.BLOCKS, 0.7f, 0.5f);
+                remove(level, site, "spent");
             }
             return true;
         }
@@ -623,7 +631,8 @@ public final class Altars {
         if (config.unique_weapons) {
             claims.claim(weapon.id(), serial, player);
             if (config.announce_forging) {
-                claims.announce(((ServerLevel) player.level()).getServer(), weapon, player);
+                claims.announce(((ServerLevel) player.level()).getServer(), weapon, player,
+                        config.weapon_copies);
             }
         }
 
@@ -643,7 +652,66 @@ public final class Altars {
             CustomWeapons.LOGGER.info("ALTAR forge player={} weapon={} at {} {} {}",
                     player.getName().getString(), weapon.id(), site.x(), site.y(), site.z());
         }
+        // One forging per temple. It has done what it was built for; a temple that can
+        // forge nothing would only send the next expedition home empty-handed.
+        if (player.level() instanceof ServerLevel level) {
+            player.displayClientMessage(Component.literal("The temple crumbles behind you.")
+                    .withStyle(ChatFormatting.GRAY), false);
+            remove(level, site, "used");
+        }
         return true;
+    }
+
+    /**
+     * Takes a temple down: the labels, every block from the floor up, and its place among
+     * the standing altars. The foundation's top course becomes the ground beside the temple,
+     * so what is left reads as a clearing rather than a slab. The site stays on file as
+     * spent: its chunk is still that region's candidate and would grow a fresh temple the
+     * next time it loaded otherwise, and the world's temple count per weapon includes it.
+     */
+    private void remove(ServerLevel level, Site site, String why) {
+        BlockPos altar = new BlockPos(site.x(), site.y(), site.z());
+        BlockPos floor = altar.below(ALTAR_HEIGHT);
+        for (ArmorStand stand : level.getEntitiesOfClass(ArmorStand.class,
+                new AABB(altar).inflate(3.0), s -> s.getTags().contains(LABEL_TAG))) {
+            stand.discard();
+        }
+        BlockState ground = groundAround(level, floor);
+        for (int dx = -OUTER - 1; dx <= OUTER + 1; dx++) {
+            for (int dz = -OUTER - 1; dz <= OUTER + 1; dz++) {
+                for (int dy = 0; dy <= CLEAR_HEIGHT; dy++) {
+                    set(level, floor.offset(dx, dy, dz), Blocks.AIR);
+                }
+                if (Math.abs(dx) <= OUTER && Math.abs(dz) <= OUTER) {
+                    set(level, floor.offset(dx, -1, dz), ground);
+                }
+            }
+        }
+        sites.put(key(site.x(), site.y(), site.z()),
+                new Site(site.weapon(), site.x(), site.y(), site.z(), site.nearSpawn(), true));
+        dirty = true;
+        save();
+        level.playSound(null, altar.getX(), altar.getY(), altar.getZ(),
+                SoundEvents.RESPAWN_ANCHOR_DEPLETE.value(), SoundSource.BLOCKS, 1.0f, 0.6f);
+        level.sendParticles(ParticleTypes.POOF, altar.getX() + 0.5, floor.getY() + 1.0, altar.getZ() + 0.5,
+                120, OUTER * 0.6, 1.5, OUTER * 0.6, 0.02);
+        CustomWeapons.LOGGER.info("ALTAR removed weapon={} at {} {} {} ({})",
+                site.weapon(), site.x(), site.y(), site.z(), why);
+    }
+
+    /** The natural ground beside the temple, to put back where its foundation showed. */
+    private BlockState groundAround(ServerLevel level, BlockPos floor) {
+        int[][] samples = { {OUTER + 2, 0}, {-OUTER - 2, 0}, {0, OUTER + 2}, {0, -OUTER - 2} };
+        for (int[] sample : samples) {
+            for (int dy = -1; dy >= -3; dy--) {
+                BlockState state = level.getBlockState(floor.offset(sample[0], dy, sample[1]));
+                if (!state.isAir() && state.getFluidState().isEmpty() && !state.canBeReplaced()
+                        && !state.is(Blocks.DEEPSLATE_BRICKS) && !state.is(Blocks.DEEPSLATE_TILES)) {
+                    return state;
+                }
+            }
+        }
+        return Blocks.COARSE_DIRT.defaultBlockState();
     }
 
     /** What the player is short of, in order, for the message. */
@@ -705,34 +773,97 @@ public final class Altars {
         inventory.setChanged();
     }
 
+    /** The temples still standing. Spent sites stay on file but are not altars any more. */
     public java.util.Collection<Site> all() {
-        return sites.values();
+        List<Site> standing = new ArrayList<>();
+        for (Site site : sites.values()) {
+            if (!site.spent()) {
+                standing.add(site);
+            }
+        }
+        return standing;
     }
 
     public int count() {
-        return sites.size();
+        return all().size();
     }
 
-    public boolean hasAltarFor(String weaponId) {
+    /** How many temples this weapon has had, standing or spent: its share of the world. */
+    public int templesBuilt(String weaponId) {
+        int n = 0;
         for (Site site : sites.values()) {
             if (site.weapon().equals(weaponId)) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /** True once one of this weapon's temples stands, or stood, near the spawn. */
+    public boolean hasNearSpawnAltar(String weaponId) {
+        for (Site site : sites.values()) {
+            if (site.weapon().equals(weaponId) && site.nearSpawn()) {
                 return true;
             }
         }
         return false;
     }
 
+    /**
+     * The weapons a new temple in this chunk may be for.
+     *
+     * <p>Every weapon gets {@code altars_per_weapon} temples. With a near-spawn radius set,
+     * one of them is owed inside it: a chunk inside the radius goes to a weapon still owed
+     * its near temple while any is, and a chunk outside never takes a weapon's last temple
+     * while its near one is still owed. With one temple per weapon that puts every temple
+     * near the spawn; with three, one is near and two are anywhere.
+     */
+    private List<CustomWeapon> candidates(WeaponsConfig config, boolean near) {
+        int limit = config.altars_per_weapon;
+        boolean nearRule = config.altar_near_spawn_radius > 0;
+        List<CustomWeapon> open = new ArrayList<>();
+        List<CustomWeapon> owedNear = new ArrayList<>();
+        for (CustomWeapon weapon : Weapons.ALL) {
+            if (!weapon.enabled(config)) {
+                continue;
+            }
+            int built = templesBuilt(weapon.id());
+            if (limit > 0 && built >= limit) {
+                continue;
+            }
+            boolean owed = nearRule && !hasNearSpawnAltar(weapon.id());
+            if (!near && owed && limit > 0 && built >= limit - 1) {
+                continue;   // the last one is the near one's
+            }
+            open.add(weapon);
+            if (near && owed) {
+                owedNear.add(weapon);
+            }
+        }
+        return owedNear.isEmpty() ? open : owedNear;
+    }
+
+    private static boolean nearSpawn(ServerLevel level, int x, int z, WeaponsConfig config) {
+        int radius = config.altar_near_spawn_radius;
+        if (radius <= 0) {
+            return false;
+        }
+        BlockPos spawn = level.getRespawnData().pos();
+        return Math.hypot(x - spawn.getX(), z - spawn.getZ()) <= radius;
+    }
+
     /** True if this block is an altar, or the pedestal holding one up. */
     public boolean isProtected(BlockPos pos) {
         for (int down = 0; down <= ALTAR_HEIGHT; down++) {
-            if (sites.containsKey(key(pos.getX(), pos.getY() + down, pos.getZ()))) {
+            Site site = sites.get(key(pos.getX(), pos.getY() + down, pos.getZ()));
+            if (site != null && !site.spent()) {
                 return true;
             }
         }
         // The whole temple, not just the pedestal: the 17x17 floor and its foundation, the
         // colonnade, and the roof. A temple with a pillar mined out is a landmark defaced;
         // one with the floor dug through is a forge you can fall out of.
-        for (Site site : sites.values()) {
+        for (Site site : all()) {
             int floor = site.y() - ALTAR_HEIGHT;
             if (Math.abs(pos.getX() - site.x()) <= OUTER + 2 && Math.abs(pos.getZ() - site.z()) <= OUTER + 2
                     && pos.getY() >= floor - 3 && pos.getY() <= floor + PILLAR_TOP + 6) {
@@ -756,7 +887,7 @@ public final class Altars {
      */
     public int rebuildAll(ServerLevel level) {
         int rebuilt = 0;
-        for (Site site : new ArrayList<>(sites.values())) {
+        for (Site site : all()) {
             CustomWeapon weapon = Weapons.byId(site.weapon());
             if (weapon == null) {
                 continue;
@@ -774,7 +905,7 @@ public final class Altars {
     public Site nearest(BlockPos pos) {
         Site best = null;
         double bestDistance = Double.MAX_VALUE;
-        for (Site site : sites.values()) {
+        for (Site site : all()) {
             double distance = pos.distSqr(new BlockPos(site.x(), site.y(), site.z()));
             if (distance < bestDistance) {
                 bestDistance = distance;
