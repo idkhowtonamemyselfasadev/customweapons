@@ -7,7 +7,9 @@
     "ResourcePackResponseMixin",
     "DisplayInvoker",
     "BlockDisplayInvoker",
-    "KnockbackMixin"
+    "KnockbackMixin",
+    "LevelDestroyMixin",
+    "ServerExplosionMixin"
   ],
   "injectors": {
     "defaultRequire": 1

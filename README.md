@@ -365,7 +365,7 @@ lore, attributes and glint on a sweep, comparing a generation counter stored on 
 **One legendary per player** (`one_weapon_per_player`): whoever already carries one and
 picks up, crafts, or is given a second has the second dropped at their feet with a note.
 Drop the first to swap. The SMP switches live there too: `unique_weapons`, `one_altar_per_weapon`,
-`announce_forging`, `protect_altars`, `protect_dropped_weapons`. Turn `unique_weapons` off and
+`announce_forging`, `protect_altars` (the whole temple: no survival mining, no explosion, no block-breaking mob; creative is exempt), `protect_dropped_weapons`. Turn `unique_weapons` off and
 it goes back to being an ordinary kit mod where anyone can craft anything.
 
 Set `log_abilities: true` for one log line per ability trigger.

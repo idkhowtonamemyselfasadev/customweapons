@@ -251,6 +251,10 @@ async function main() {
   // fail silently as "Incorrect argument for command".
   cmd('gamerule natural_health_regeneration false');
   cmd('gamerule spawn_mobs false');
+  // A slime chunk under the arena keeps producing slimes regardless of the rule above (seen
+  // biting the Dummy mid-measurement and swarming a Sunstrike), so sweep them every few seconds.
+  const slimeSweep = setInterval(() => cmd('kill @e[type=minecraft:slime]'), 3000);
+  slimeSweep.unref();
   cmd('gamerule keep_inventory true');
   cmd('gamerule immediate_respawn true');
   cmd('difficulty normal');
@@ -1328,6 +1332,37 @@ async function main() {
     check(hellLeft === 0, 'no tagged displays remain 6.5s after the explosion', `${hellLeft} on the server`);
   }
 
+  // A bolt that lands on the GROUND next to somebody. This used to kill the server: the
+  // ground detonation ran inside the projectile tick loop, its blast damage re-entered the
+  // projectile map from the damage event, and the loop's iterator threw a
+  // ConcurrentModificationException. The check is simply that the server is still there.
+  console.log('   -- Hellfire on the ground');
+  cmd('kill @e[type=minecraft:arrow]');
+  cmd('tp Archer 0 -59 0');
+  cmd('tp Dummy 3 -59 0');
+  await healDummy();
+  await sleep(Math.max(0, boltFxAt + 8500 - Date.now()));   // the cooldown from the direct hit
+  if (!archer.heldItem || archer.heldItem.name !== 'crossbow') await equipByName(archer, 'crossbow');
+  archer.actionBars.length = 0;
+  dummy.velocityPackets.length = 0;
+  const groundBefore = dummy.health;
+  // Aim at the floor a block short of Dummy: the bolt lands beside it, never on it.
+  await archer.lookAt(dummy.entity.position.offset(-1.0, -1.0, 0), true);
+  archer.activateItem();
+  await sleep(1500);
+  archer.deactivateItem();
+  await sleep(400);
+  archer.activateItem();
+  await sleep(3000);
+  cmd('say HELLFIRE_GROUND_ALIVE');
+  const groundAliveRe = new RegExp('HELLFIRE_GROUND_ALIVE');
+  const alive = await waitUntil(() => smith.chats.some((m) => groundAliveRe.test(m)), 3000);
+  console.log(`   ground bolt: Dummy ${groundBefore} -> ${dummy.health}; velocity packets ${dummy.velocityPackets.length}; `
+      + `Archer bar ${JSON.stringify(archer.actionBars)}`);
+  check(alive, 'the server is still ticking after a Hellfire bolt landed on the ground beside Dummy');
+  check(dummy.health < groundBefore || dummy.velocityPackets.length > 0, 'the ground blast still reached Dummy');
+  cmd('tp Archer 0 -59 -12');   // out of every later radius: Archer inside the Starfall impact read as a second hit
+
   // Leave the arena clean for the SMP rules: no stray weapons, no lingering effects.
   cmd('kill @e[type=minecraft:arrow]');
   cmd('kill @e[type=minecraft:item]');
@@ -1342,6 +1377,11 @@ async function main() {
   console.log('\n== 8b. Dawnbreaker, Voidreaper, Starfall, Exsanguinate, Stagger ==');
   const dist3 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
   const barHas = (bot, re) => bot.actionBars.some((m) => re.test(m.trim()));
+  // The flat world's random seed lands on a slime chunk now and then, and slimes kept
+  // appearing mid-section despite spawn_mobs false (one run had a Sunstrike hit four of
+  // them and a slime kill both bots). Clear them before every block here.
+  const clearSlimes = () => cmd('kill @e[type=minecraft:slime]');
+  clearSlimes();
   cmd('effect clear Dummy');
   cmd('effect clear Smith');
   cmd('clear Dummy');
@@ -1424,6 +1464,7 @@ async function main() {
   // ---- Voidreaper: the Rift puts the wielder behind the mark, the next hit is a backstab,
   // every hit withers, and a kill feeds the wielder.
   console.log('   -- Voidreaper');
+  clearSlimes();
   cmd('clear Smith');
   cmd('customweapon give Smith voidreaper');
   cmd('effect clear Dummy');
@@ -1492,21 +1533,34 @@ async function main() {
     // Soul Harvest: a one-hit kill heals Smith 4.0. Smith is still where the Rift put them,
     // four blocks from where the zombie appears: back to the origin first, or the swing
     // never reaches it.
+    clearSlimes();
     cmd('tp Smith 0 -59 0');
     cmd('damage Smith 10 minecraft:generic');
     cmd('summon minecraft:zombie 1 -59 2 {NoAI:1b,Health:1f,Silent:1b}');
-    await sleep(1200);
-    const zombie = Object.values(smith.entities).find((e) => e.name === 'zombie');
+    // Up to 4 s for the spawn packet: one run's zombie took longer than a second to appear.
+    let zombie = null;
+    await waitUntil(() => (zombie = Object.values(smith.entities).find((e) => e.name === 'zombie')), 4000);
     if (!zombie) {
       fail('a zombie was summoned next to Smith for the harvest');
     } else {
+      // The /damage above has to have landed before the baseline is read, or the heal is
+      // measured against a health the damage then pulls down (one run read 20 -> 14).
+      await waitUntil(() => smith.health <= 12, 3000);
       const hpBefore = smith.health;
       smith.actionBars.length = 0;
+      console.log(`   zombie at ${zombie.position}, Smith at ${smith.entity.position} `
+          + `(${dist3(zombie.position, smith.entity.position).toFixed(2)} blocks), Smith holding ${smith.heldItem ? smith.heldItem.name : 'nothing'}`);
       await smith.lookAt(zombie.position.offset(0, 1.0, 0), true);
       await sleep(300);
-      smith.attack(zombie);
-      const fed = await waitUntil(() => smith.health > hpBefore, 1500);
+      // Two swings 700 ms apart: one run saw the first swing never register (the zombie
+      // stood untouched and turned up inside the next weapon's impact radius).
+      let fed = false;
+      for (let swing = 0; swing < 2 && !fed; swing++) {
+        smith.attack(zombie);
+        fed = await waitUntil(() => smith.health > hpBefore, 700);
+      }
       await sleep(300);
+      cmd('data get entity @e[type=minecraft:zombie,limit=1] Health');
       console.log(`   harvest: Smith ${hpBefore} -> ${smith.health}; Smith bar ${JSON.stringify(smith.actionBars)}`);
       check(fed && smith.health - hpBefore >= 3.5, 'the kill heals Smith 4.0 (Soul Harvest)', `${(smith.health - hpBefore).toFixed(1)}`);
       check(barHas(smith, /^Soul Harvest\s+\+4\.0$/), 'Smith sees "Soul Harvest  +4.0"', smith.actionBars.slice(-1)[0] || '');
@@ -1516,6 +1570,8 @@ async function main() {
 
   // ---- Starfall: the Comet launches, and landing while falling as a comet is the impact.
   console.log('   -- Starfall');
+  clearSlimes();
+  cmd('kill @e[type=minecraft:zombie]');
   cmd('clear Smith');
   cmd('customweapon give Smith starfall');
   cmd('effect clear Dummy');
@@ -1563,6 +1619,7 @@ async function main() {
 
   // ---- Bloodletter Exsanguinate: bursts the bleeds the wielder owns nearby.
   console.log('   -- Exsanguinate');
+  clearSlimes();
   cmd('clear Smith');
   cmd('customweapon give Smith bloodletter');
   cmd('effect clear Dummy');
@@ -1605,6 +1662,7 @@ async function main() {
 
   // ---- Aegis Hammer Stagger: the third quick hit stuns for a second.
   console.log('   -- Stagger');
+  clearSlimes();
   cmd('clear Smith');
   cmd('customweapon give Smith aegis_hammer');
   cmd('effect clear Dummy');
@@ -1889,6 +1947,37 @@ async function main() {
     await sleep(1500);
     check(smith.blockAt(lodestone.position).name === before,
         'the altar block cannot be mined', smith.blockAt(lodestone.position).name);
+    // The rest of the temple is protected too, and not only from picks.
+    const lp = lodestone.position;
+    const pillar = smith.findBlock({ matching: (b) => b.name === 'chiseled_deepslate' || /_bricks$|_block$|pillar/.test(b.name),
+      point: lp.offset(7, -2, 7), maxDistance: 3 });
+    if (pillar) {
+      const pillarName = pillar.name;
+      const pp = pillar.position;
+      console.log(`   temple block ${pillarName} at ${pp} (altar at ${lp})`);
+      // Stand next to it: a dig from eight blocks away is refused by vanilla as "too far",
+      // which the client mispredicts as a break and proves nothing about the mod.
+      cmd(`tp Smith ${pp.x - 1.5} ${pp.y} ${pp.z + 0.5}`);
+      await sleep(1200);
+      try { await Promise.race([smith.dig(smith.blockAt(pp)), sleep(12000)]); } catch (e) { console.log('   pillar dig refused: ' + e.message); }
+      await sleep(1200);
+      // The server's word, not the client's prediction.
+      const offset = fs.readFileSync(RUN + '/test.log', 'utf8').length;
+      cmd(`execute if block ${pp.x} ${pp.y} ${pp.z} minecraft:${pillarName}`);
+      await sleep(800);
+      const tail = fs.readFileSync(RUN + '/test.log', 'utf8').slice(offset);
+      check(/Test passed/.test(tail), `a temple block (${pillarName}) cannot be mined either (server-side)`,
+          (tail.match(/Test (passed|failed)/) || ['no echo'])[0]);
+      await stepBack();
+    } else {
+      console.log('   (skip) no temple block found by the colonnade corner');
+    }
+    cmd(`summon minecraft:tnt ${lp.x + 0.5} ${lp.y + 1} ${lp.z + 0.5} {fuse:10}`);
+    cmd(`summon minecraft:tnt ${lp.x + 1.5} ${lp.y + 1} ${lp.z + 0.5} {fuse:10}`);
+    await sleep(2500);
+    check(smith.blockAt(lp).name === before, 'TNT on the pedestal does not remove the altar', smith.blockAt(lp).name);
+    const tntFloor = smith.blockAt(lp.offset(0, -4, 0));
+    console.log('   floor under the altar after TNT: ' + (tntFloor ? tntFloor.name : '?'));
   }
 
   // Natural generation: walk into land the world has never generated before.

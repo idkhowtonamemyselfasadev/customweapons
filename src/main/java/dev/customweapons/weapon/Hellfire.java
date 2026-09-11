@@ -126,6 +126,10 @@ public final class Hellfire extends CustomWeapon {
         if (projectile.getDeltaMovement().lengthSqr() > LANDED_SPEED_SQR) {
             return true;
         }
+        // Disarm before the blast: the blast hurts whoever stands next to the bolt, that
+        // damage is attributed to the bolt, and an armed bolt would fire onProjectileHit
+        // from inside its own explosion - a second explosion from the same shot.
+        CustomWeapons.projectiles().take(projectile);
         explode(projectile, projectile.position(), null, config);
         return false;
     }

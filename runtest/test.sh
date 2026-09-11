@@ -182,6 +182,8 @@ assert_log "the Exsanguinate burst one bleed"       "ABILITY exsanguinate player
 assert_log "the Stagger stunned Dummy"              "ABILITY stagger player=Smith victim=Dummy" -ge 1
 assert_log "a Hellfire bolt was armed"              "ABILITY hellfire arm"            -ge 1
 assert_log "the Hellfire bolt exploded"             "ABILITY hellfire explode"        -ge 1
+assert_log "a Hellfire bolt detonated on the ground (the crash path)" "ABILITY hellfire explode direct=ground" -ge 1
+assert_log "no ConcurrentModificationException anywhere"  "ConcurrentModificationException" -eq 0
 assert_log "the one-legendary rule dropped the second weapon, keeping the first" \
            "LIMIT Smith dropped gale_edge \(carrying frostbrand\)"            -ge 1
 assert_log "the altar forged a weapon"              "ALTAR forge .* weapon=bloodletter" -ge 1
