@@ -247,9 +247,9 @@ public final class Weapons {
     /**
      * Decides whether this stack is <em>the</em> weapon.
      *
-     * <p>A weapon straight off the recipe has no serial. If nobody holds the claim it becomes
-     * the real one here, which is the moment the recipe "goes off". If somebody already does,
-     * this is a copy: it turns back into the plain base item and the rest of the price is
+     * <p>A weapon straight off the recipe has no serial. While the world still has room for
+     * another ({@code weapon_copies}) it becomes a real one here, which is the moment the
+     * recipe "goes off". Once the world is full, this is a copy: it turns back into the plain base item and the rest of the price is
      * handed back, because taking a player's wither skulls for an item they cannot keep would
      * be robbery rather than a rule.
      *
@@ -259,20 +259,20 @@ public final class Weapons {
                                         Inventory inventory, int slot, ItemStack stack,
                                         CustomWeapon weapon, WeaponsConfig config, Claims claims) {
         String serial = serialOf(stack);
-        Claims.Claim claim = claims.claimOf(weapon.id());
-
-        if (claim == null) {
+        if (!serial.isEmpty() && claims.bySerial(weapon.id(), serial) != null) {
+            return true;   // one of the real ones
+        }
+        int limit = config.weapon_copies;
+        if (!claims.isFull(weapon.id(), limit)) {
             String assigned = serial.isEmpty() ? Claims.newSerial() : serial;
             setSerial(stack, assigned);
             claims.claim(weapon.id(), assigned, player);
             if (config.announce_forging) {
-                claims.announce(server, weapon, player);
+                claims.announce(server, weapon, player, limit);
             }
-            CustomWeapons.LOGGER.info("CLAIM weapon={} serial={} owner={}",
-                    weapon.id(), assigned, player.getName().getString());
-            return true;
-        }
-        if (serial.equals(claim.serial())) {
+            CustomWeapons.LOGGER.info("CLAIM weapon={} serial={} owner={} copy={}/{}",
+                    weapon.id(), assigned, player.getName().getString(),
+                    claims.count(weapon.id()), limit);
             return true;
         }
 
@@ -289,8 +289,9 @@ public final class Weapons {
         inventory.setChanged();
         player.sendSystemMessage(Component.literal("")
                 .append(weapon.displayName())
-                .append(Component.literal(" has already been forged by " + claim.owner()
-                        + ". There is only one on this world; your materials have been returned.")
+                .append(Component.literal(" has already been forged by " + claims.owners(weapon.id())
+                        + ". There " + (limit == 1 ? "is only one" : "are only " + limit)
+                        + " on this world; your materials have been returned.")
                         .withStyle(net.minecraft.ChatFormatting.RED)));
         CustomWeapons.LOGGER.info("DUPLICATE weapon={} refunded to {}",
                 weapon.id(), player.getName().getString());

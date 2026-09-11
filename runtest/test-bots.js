@@ -1721,28 +1721,40 @@ async function main() {
   check(dummy.chats.some((m) => /has forged/.test(m)),
       'the whole server is told a legendary was forged',
       dummy.chats.filter((m) => /forged/.test(m)).slice(-1)[0] || '');
+  check(dummy.chats.some((m) => /1 of 3 on this world/.test(m)),
+      'and which of the three it was',
+      dummy.chats.filter((m) => /forged/.test(m)).slice(-1)[0] || '');
 
-  // A second one, by command: refused outright.
+  // The world holds three (weapon_copies): the second and third go out, the fourth does not.
+  cmd('customweapon give Dummy bloodletter');
+  await sleep(1500);
+  cmd('customweapon give Dummy bloodletter');
+  await sleep(2500);
+  const dummySwords = () => dummy.inventory.items().filter((i) => i.name === 'netherite_sword').length;
+  check(dummySwords() === 2, 'the second and third Bloodletters are handed out', `${dummySwords()} sword(s)`);
+  check(dummy.chats.some((m) => /3 of 3 on this world/.test(m)),
+      'the third is announced as the last',
+      dummy.chats.filter((m) => /forged/.test(m)).slice(-1)[0] || '');
   cmd('customweapon give Dummy bloodletter');
   await sleep(2000);
-  check(!dummy.inventory.items().some((i) => i.name === 'netherite_sword'),
-      'a second Bloodletter cannot be given out');
+  check(dummySwords() === 2, 'a fourth Bloodletter cannot be given out', `${dummySwords()} sword(s)`);
 
-  // A second one, by crafting: it turns back into a plain sword and the price comes back.
+  // A fourth one, by crafting: it turns back into a plain sword and the price comes back.
   console.log('   crafting a duplicate...');
   const dupe = await craftBloodletter(dummy);
   await sleep(2500);
-  const dupeSword = dummy.inventory.items().find((i) => i.name === 'netherite_sword');
+  const dupeSword = dummy.inventory.items().find((i) => i.name === 'netherite_sword' && !/Bloodletter/.test(JSON.stringify(i)));
   console.log('   ' + describe(dupeSword));
-  check(dupeSword && !/Bloodletter/.test(JSON.stringify(dupeSword)),
-      'a crafted duplicate reverts to a plain netherite sword');
+  // craftBloodletter clears the crafter's inventory first, so the one sword left is the result.
+  check(!!dupeSword && dummySwords() === 1,
+      'a crafted duplicate reverts to a plain netherite sword', `${dummySwords()} sword(s), plain: ${!!dupeSword}`);
   check(dummy.inventory.items().some((i) => i.name === 'wither_skeleton_skull'),
       'the duplicate crafter gets their materials back',
       JSON.stringify(dummy.inventory.items().map((i) => i.name)));
   check(dummy.chats.some((m) => /already been forged/.test(m)),
       'and is told why', dummy.chats.filter((m) => /forged/.test(m)).slice(-1)[0] || '');
 
-  // Releasing it lets the world have one again. Both inventories have to be empty first:
+  // Releasing one lets the world have three again. Both inventories have to be empty first:
   // an unclaimed weapon that still exists in somebody's inventory re-claims itself on the
   // next sweep, which is what should happen when an admin unclaims one by mistake.
   cmd('clear Smith');
@@ -1752,13 +1764,13 @@ async function main() {
   await sleep(1500);
   cmd('customweapon give Dummy bloodletter');
   await sleep(2500);
-  check(dummy.inventory.items().some((i) => i.name === 'netherite_sword'),
-      'after /customweapon unclaim it can be forged again');
+  check(dummySwords() === 1,
+      'after /customweapon unclaim one more can be forged', `${dummySwords()} sword(s)`);
 
   // Leave nothing claimed and nothing carried, so the altar section starts clean.
   cmd('clear Dummy');
   await sleep(1500);
-  cmd('customweapon unclaim weapon bloodletter');
+  for (let i = 0; i < 3; i++) cmd('customweapon unclaim weapon bloodletter');
   await sleep(1500);
 
   // ------------------------------------------------- 9b. one legendary per player
@@ -1894,48 +1906,6 @@ async function main() {
     cmd('clear Smith');
     await sleep(1000);
 
-    // With the whole price in hand.
-    cmd('give Smith minecraft:netherite_sword 1');
-    cmd('give Smith minecraft:wither_skeleton_skull 3');
-    cmd('give Smith minecraft:ghast_tear 4');
-    cmd('give Smith minecraft:netherite_ingot 1');
-    await sleep(1500);
-    await clickAltar();
-    const forged = smith.inventory.items().find((i) => i.name === 'netherite_sword');
-    check(forged && /Bloodletter/.test(JSON.stringify(forged)),
-        'the altar forges the weapon', forged ? 'got one' : 'nothing');
-    check(!smith.inventory.items().some((i) => i.name === 'wither_skeleton_skull'),
-        'the altar takes the materials');
-
-    // The forged Bloodletter is itself a netherite sword. It must not be spent as the
-    // ingredient for the next one.
-    cmd('give Smith minecraft:wither_skeleton_skull 3');
-    cmd('give Smith minecraft:ghast_tear 4');
-    cmd('give Smith minecraft:netherite_ingot 1');
-    await sleep(1500);
-    await clickAltar();
-    console.log('   ' + JSON.stringify(smith.chats.slice(-3)));
-    const swords = smith.inventory.items().filter((i) => i.name === 'netherite_sword');
-    check(smith.inventory.items().some((i) => i.name === 'wither_skeleton_skull'),
-        'the second forge is refused: the materials are untouched');
-    check(swords.length === 1 && /Bloodletter/.test(JSON.stringify(swords[0])),
-        'the player still has exactly their one Bloodletter',
-        `${swords.length} netherite sword(s)`);
-
-    // The altar is spent, not broken: it says who beat you to it.
-    cmd('give Smith minecraft:wither_skeleton_skull 3');
-    cmd('give Smith minecraft:ghast_tear 4');
-    cmd('give Smith minecraft:netherite_ingot 1');
-    cmd('give Smith minecraft:netherite_sword 1');
-    await sleep(1800);
-    await clickAltar();
-    console.log('   ' + JSON.stringify(smith.chats.slice(-2)));
-    check(smith.chats.some((m) => /altar is spent/.test(m)),
-        'a spent altar names whoever forged the weapon',
-        smith.chats.slice(-1)[0] || '');
-    check(smith.inventory.items().some((i) => i.name === 'wither_skeleton_skull'),
-        'a spent altar takes nothing');
-
     // Nobody mines the altar out from under the server.
     await stepBack();
     const before = smith.blockAt(lodestone.position).name;
@@ -1978,6 +1948,95 @@ async function main() {
     check(smith.blockAt(lp).name === before, 'TNT on the pedestal does not remove the altar', smith.blockAt(lp).name);
     const tntFloor = smith.blockAt(lp.offset(0, -4, 0));
     console.log('   floor under the altar after TNT: ' + (tntFloor ? tntFloor.name : '?'));
+
+    // With the whole price in hand: the altar forges, and then it is gone.
+    const price = () => {
+      cmd('give Smith minecraft:netherite_sword 1');
+      cmd('give Smith minecraft:wither_skeleton_skull 3');
+      cmd('give Smith minecraft:ghast_tear 4');
+      cmd('give Smith minecraft:netherite_ingot 1');
+    };
+    const bloodletters = () => smith.inventory.items().filter((i) => /Bloodletter/.test(JSON.stringify(i))).length;
+    const labelsNear = (pos) => Object.values(smith.entities).filter((e) =>
+        e.name === 'armor_stand' && e.position && e.position.distanceTo(pos) < 3.5).length;
+    const templeBlocksNear = (pos) => smith.findBlocks({ point: pos, maxDistance: 14, count: 50,
+      matching: (b) => b.name === 'deepslate_tiles' || b.name === 'soul_lantern' || b.name === 'red_nether_bricks' }).length;
+    cmd('clear Smith');
+    price();
+    await sleep(1500);
+    dummy.chats.length = 0;
+    await clickAltar();
+    await sleep(1500);
+    console.log('   ' + JSON.stringify(smith.chats.slice(-3)));
+    check(bloodletters() === 1, 'the altar forges the weapon', `${bloodletters()} Bloodletter(s)`);
+    check(!smith.inventory.items().some((i) => i.name === 'wither_skeleton_skull'),
+        'the altar takes the materials');
+    check(smith.chats.some((m) => /temple crumbles/.test(m)), 'the player is told the temple is gone',
+        smith.chats.slice(-2).join(' | '));
+    check(smith.blockAt(lp).name !== 'lodestone', 'the used altar is gone', smith.blockAt(lp).name);
+    check(templeBlocksNear(lp) === 0, 'the whole temple above the ground is gone', `${templeBlocksNear(lp)} temple block(s) left`);
+    check(labelsNear(lp) === 0, 'its labels are gone too', `${labelsNear(lp)} stand(s)`);
+    const groundNow = smith.blockAt(lp.offset(0, -4, 0));
+    console.log('   ground where the floor was: ' + (groundNow ? groundNow.name : '?'));
+    check(!!groundNow && groundNow.name !== 'deepslate_bricks' && groundNow.name !== 'air',
+        'the foundation is covered by the ground beside it', groundNow ? groundNow.name : '?');
+    // The footprint is ordinary ground again: a dig there works. The server's word, not the
+    // client's prediction.
+    const digPos = lp.offset(0, -4, 0);
+    cmd(`tp Smith ${lp.x + 1.5} ${lp.y - 3} ${lp.z + 0.5}`);
+    await sleep(1200);
+    try { await Promise.race([smith.dig(smith.blockAt(digPos)), sleep(12000)]); } catch (e) { console.log('   dig: ' + e.message); }
+    await sleep(1000);
+    {
+      const offset = fs.readFileSync(RUN + '/test.log', 'utf8').length;
+      cmd(`execute if block ${digPos.x} ${digPos.y} ${digPos.z} minecraft:air`);
+      await sleep(800);
+      const tail = fs.readFileSync(RUN + '/test.log', 'utf8').slice(offset);
+      check(/Test passed/.test(tail), 'the ground where the temple stood can be mined again (server-side)',
+          (tail.match(/Test (passed|failed)/) || ['no echo'])[0]);
+    }
+    cmd(`setblock ${digPos.x} ${digPos.y} ${digPos.z} minecraft:grass_block`);
+    cmd('kill @e[type=minecraft:item]');
+
+    // Three temples are three forgings. The forged Bloodletter is itself a netherite sword
+    // and must not be spent as the ingredient for the next one.
+    for (let n = 2; n <= 3; n++) {
+      cmd('tp Smith 40 -59 40');
+      await sleep(1500);
+      cmd('execute as Smith at Smith run customweapon altar place bloodletter');
+      await sleep(2000);
+      check(smith.blockAt(lp).name === 'lodestone', `temple ${n} stands where the first one stood`, smith.blockAt(lp).name);
+      price();
+      await sleep(1500);
+      dummy.chats.length = 0;
+      await clickAltar();
+      await sleep(1500);
+      check(bloodletters() === n, `temple ${n} forges Bloodletter ${n}`, `${bloodletters()} Bloodletter(s)`);
+      check(smith.blockAt(lp).name !== 'lodestone', `temple ${n} is gone after its forging`, smith.blockAt(lp).name);
+    }
+    check(dummy.chats.some((m) => /3 of 3 on this world/.test(m)), 'the third forging is announced as the last',
+        dummy.chats.filter((m) => /forged/.test(m)).slice(-1)[0] || '');
+
+    // A fourth temple has nothing left to forge: it says so, takes nothing, and crumbles.
+    cmd('tp Smith 40 -59 40');
+    await sleep(1500);
+    cmd('execute as Smith at Smith run customweapon altar place bloodletter');
+    await sleep(2000);
+    check(smith.blockAt(lp).name === 'lodestone', 'a fourth temple can still be placed by command', smith.blockAt(lp).name);
+    price();
+    await sleep(1800);
+    await clickAltar();
+    await sleep(1500);
+    console.log('   ' + JSON.stringify(smith.chats.slice(-2)));
+    check(smith.chats.some((m) => /altar is spent/.test(m)), 'a spent altar names whoever forged the weapons',
+        smith.chats.slice(-1)[0] || '');
+    check(smith.inventory.items().some((i) => i.name === 'wither_skeleton_skull'), 'a spent altar takes nothing');
+    check(bloodletters() === 3, 'and forges nothing', `${bloodletters()} Bloodletter(s)`);
+    check(smith.blockAt(lp).name !== 'lodestone', 'a spent altar crumbles too', smith.blockAt(lp).name);
+    cmd('clear Smith');
+    cmd('kill @e[type=minecraft:item]');
+    for (let i = 0; i < 3; i++) cmd('customweapon unclaim weapon bloodletter');
+    await sleep(1500);
   }
 
   // Natural generation: walk into land the world has never generated before.

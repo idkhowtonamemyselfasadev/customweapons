@@ -80,6 +80,9 @@ cat > config/customweapons.json <<'JSON'
   "one_weapon_per_player": false,
   "altars_enabled": false,
   "altar_spacing_chunks": 6,
+  "weapon_copies": 3,
+  "altars_per_weapon": 3,
+  "altar_near_spawn_radius": 250,
   "stat_sweep_interval_ticks": 5,
   "world_effects": true,
   "log_abilities": true
@@ -186,7 +189,10 @@ assert_log "a Hellfire bolt detonated on the ground (the crash path)" "ABILITY h
 assert_log "no ConcurrentModificationException anywhere"  "ConcurrentModificationException" -eq 0
 assert_log "the one-legendary rule dropped the second weapon, keeping the first" \
            "LIMIT Smith dropped gale_edge \(carrying frostbrand\)"            -ge 1
-assert_log "the altar forged a weapon"              "ALTAR forge .* weapon=bloodletter" -ge 1
+assert_log "the altar forged a weapon"              "ALTAR forge .* weapon=bloodletter" -ge 3
+assert_log "every used altar was taken down"       "ALTAR removed weapon=bloodletter .* \(used\)"  -ge 3
+assert_log "the altar of a weapon the world is full of was taken down" "ALTAR removed weapon=bloodletter .* \(spent\)" -ge 1
+assert_log "the copies were counted up to the cap"  "CLAIM weapon=bloodletter .* copy=3/3" -ge 1
 assert_log "altars generate in newly generated chunks" "Weapon altar placed"           -ge 1
 # World effects: the keyframes in effects.json parse into the records at boot, and the
 # block displays they play never raise from the tick loop or the display mixins.

@@ -20,15 +20,21 @@ mkdir -p config
 # build. The default boots with altars on, so the spawn area grows some organically first.
 BOOT_ALTARS="${ALTARS_OFF_AT_BOOT:+false}"; BOOT_ALTARS="${BOOT_ALTARS:-true}"
 sed -n "/<<'JSON'/,/^JSON$/p" test.sh | sed '1d;$d' \
-    | sed -e "s/^  \"altars_enabled\": false,\$/  \"altars_enabled\": $BOOT_ALTARS,\n  \"one_altar_per_weapon\": true,/" \
+    | sed -e "s/^  \"altars_enabled\": false,\$/  \"altars_enabled\": $BOOT_ALTARS,/" \
           -e 's/^  "altar_spacing_chunks": [0-9]*,$/  "altar_spacing_chunks": 6,/' \
           -e 's/^  "unique_weapons": true,$/  "unique_weapons": false,/' \
     > config/customweapons.json
-for want in "\"altars_enabled\": $BOOT_ALTARS" '"one_altar_per_weapon": true' '"altar_spacing_chunks": 6' '"unique_weapons": false'; do
+for want in "\"altars_enabled\": $BOOT_ALTARS" '"altars_per_weapon": 3' '"altar_near_spawn_radius": 250' '"altar_spacing_chunks": 6' '"unique_weapons": false'; do
     grep -q "$want" config/customweapons.json || { echo "!! config extraction failed: missing $want"; exit 1; }
 done
 
 mkfifo console.fifo
+# The jar that was just built, not whatever the sync left in mods/: this runner once tested
+# the previous release and reported the new placement rules missing.
+if [ -f "$RUN/../build/libs/customweapons-1.0.0.jar" ]; then
+    cp "$RUN/../build/libs/customweapons-1.0.0.jar" mods/customweapons-1.0.0.jar
+fi
+echo "== mod jar: $(ls -la mods/customweapons-1.0.0.jar | awk '{print $5, $6, $7, $8}') =="
 java -Xmx1500M -jar fabric-server-launch.jar nogui < console.fifo > test.log 2>&1 &
 SERVER_PID=$!
 exec 3> console.fifo

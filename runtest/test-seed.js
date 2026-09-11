@@ -1,12 +1,13 @@
 // Verifies `/customweapon altar seed [radius]`: the command that gives a pre-generated world
 // the altars it never grew. Standalone: run-seed-test.sh boots the server with
-// altars_enabled + one_altar_per_weapon, spacing 6, then runs `node test-seed.js`.
-// With ALTARS_OFF_AT_BOOT=1 the server boots with altars off and this script switches them
-// on via `customweapon reload` before seeding, so every altar comes from the command
-// ("Built 7"); by default the spawn area grows a few organically first ("Built 2" or so).
+// altars_enabled, altars_per_weapon 3, altar_near_spawn_radius 250, spacing 6, then runs
+// `node test-seed.js`. With ALTARS_OFF_AT_BOOT=1 the server boots with altars off and this
+// script switches them on via `customweapon reload` before seeding, so every altar comes from
+// the command ("Built 30"); by default the spawn area grows a few organically first.
 //
 // 1. bot "Seeder" joins, gets op over the console FIFO
-// 2. /customweapon altar seed 600 -> reply lists 7 altars, log has 7 "Weapon altar placed"
+// 2. /customweapon altar seed 600 -> reply lists 30 altars (3 per weapon, one of each within
+//    250 blocks of the spawn), log has 30 "Weapon altar placed"
 // 3. the same command again -> "Built 0 altar(s)" (idempotent)
 // 4. /customweapon altar find names one of them
 // 5. teleport onto every altar: a lodestone sits at the recorded position, exactly one
@@ -19,7 +20,11 @@ const RUN = __dirname;
 const PORT = parseInt(process.env.PORT || '25603', 10);
 const console_fifo = fs.createWriteStream(RUN + '/console.fifo', { flags: 'a' });
 
-const WEAPONS = ['bloodletter', 'gale_edge', 'stormpiercer', 'aegis_hammer', 'frostbrand', 'tidecaller', 'hellfire'];
+const WEAPONS = ['bloodletter', 'gale_edge', 'stormpiercer', 'aegis_hammer', 'frostbrand', 'tidecaller',
+  'hellfire', 'dawnbreaker', 'voidreaper', 'starfall'];
+const PER_WEAPON = 3;            // altars_per_weapon in the harness config
+const NEAR_RADIUS = 250;         // altar_near_spawn_radius in the harness config
+const TOTAL = WEAPONS.length * PER_WEAPON;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let failures = 0;
@@ -93,6 +98,9 @@ async function main() {
   console.log('== 1. Seeder joins and is opped ==');
   const bot = await connect('Seeder');
   await sleep(1500);
+  // The bot arrives at the world spawn; the near-spawn rule is measured from there.
+  const spawn = { x: bot.entity.position.x, z: bot.entity.position.z };
+  console.log(`   spawn is about ${spawn.x.toFixed(0)} ${spawn.z.toFixed(0)}`);
   cmd('op Seeder');
   await sleep(2000);
   if (process.env.ALTARS_OFF_AT_BOOT) {
@@ -114,31 +122,50 @@ async function main() {
   bot.chats.length = 0;
   const t0 = Date.now();
   bot.chat('/customweapon altar seed 600');
-  const built = await waitChat(bot, /Built \d+ altar\(s\)\. \d+ known in total/, 60000);
+  const built = await waitChat(bot, /Built \d+ altar\(s\)\. \d+ known in total/, 180000);
   const seedMs = Date.now() - t0;
   console.log(`   seed run took ${(seedMs / 1000).toFixed(1)}s`);
   await sleep(2500);   // the per-altar lines follow the summary
-  check(!!built, 'the seed command replied within 60 s', built || JSON.stringify(bot.chats.slice(-5)));
+  check(!!built, 'the seed command replied within 180 s', built || JSON.stringify(bot.chats.slice(-5)));
   const builtN = built ? +built.match(/Built (\d+)/)[1] : -1;
   const knownN = built ? +built.match(/(\d+) known in total/)[1] : -1;
   console.log(`   reply: ${built}`);
   const listed = altarLines(bot.chats);
   for (const a of listed) console.log(`   - ${a.name}  ${a.x} ${a.y} ${a.z}`);
-  check(knownN === 7, 'the reply says 7 altars are known in total', `${knownN}`);
-  check(builtN + beforeSeed.length === 7, 'the seed built every altar the spawn area had not already grown',
+  check(knownN === TOTAL, `the reply says ${TOTAL} altars are known in total`, `${knownN}`);
+  check(builtN + beforeSeed.length === TOTAL, 'the seed built every altar the spawn area had not already grown',
       `built ${builtN} + ${beforeSeed.length} organic`);
-  check(listed.length === 7, 'the reply lists 7 altars with coordinates', `${listed.length} lines`);
-  check(new Set(listed.map((a) => a.name)).size === 7, 'the 7 listed altars are 7 different weapons',
-      [...new Set(listed.map((a) => a.name))].join(', '));
+  check(listed.length === TOTAL, `the reply lists ${TOTAL} altars with coordinates`, `${listed.length} lines`);
+  const perName = {};
+  for (const a of listed) perName[a.name] = (perName[a.name] || 0) + 1;
+  check(Object.keys(perName).length === WEAPONS.length
+      && Object.values(perName).every((n) => n === PER_WEAPON),
+      `the listed altars are ${PER_WEAPON} for each of the ${WEAPONS.length} weapons`, JSON.stringify(perName));
   check(listed.every((a) => Math.hypot(a.x, a.z) <= 600 + 64),
       'every altar lies within the requested radius (plus one chunk of slack)');
 
   const placed = placedLines();
   console.log(`   ${placed.length} "Weapon altar placed" lines in test.log`);
-  check(placed.length === 7, 'test.log has exactly 7 "Weapon altar placed" lines', `${placed.length}`);
+  check(placed.length === TOTAL, `test.log has exactly ${TOTAL} "Weapon altar placed" lines`, `${placed.length}`);
   const placedIds = placed.map((p) => p.weapon).sort();
-  check(JSON.stringify(placedIds) === JSON.stringify([...WEAPONS].sort()),
-      'one placed line per weapon id', placedIds.join(', '));
+  const expectedIds = WEAPONS.flatMap((w) => Array(PER_WEAPON).fill(w)).sort();
+  check(JSON.stringify(placedIds) === JSON.stringify(expectedIds),
+      `${PER_WEAPON} placed lines per weapon id`, placedIds.join(', '));
+  // One of each weapon's temples lies near the spawn; the others may be anywhere.
+  const nearBy = {};
+  for (const p of placed) {
+    const d = Math.hypot(p.x - spawn.x, p.z - spawn.z);
+    if (d <= NEAR_RADIUS + 16) nearBy[p.weapon] = (nearBy[p.weapon] || 0) + 1;
+  }
+  console.log(`   temples within ${NEAR_RADIUS} of spawn: ${JSON.stringify(nearBy)}`);
+  check(WEAPONS.every((w) => (nearBy[w] || 0) >= 1),
+      `every weapon has a temple within ${NEAR_RADIUS} blocks of the spawn`,
+      WEAPONS.filter((w) => !nearBy[w]).join(', ') || 'all');
+  const farBy = {};
+  for (const p of placed) {
+    if (Math.hypot(p.x - spawn.x, p.z - spawn.z) > NEAR_RADIUS + 16) farBy[p.weapon] = (farBy[p.weapon] || 0) + 1;
+  }
+  check(Object.values(farBy).some((n) => n >= 1), 'and the rest are spread beyond it', JSON.stringify(farBy));
   // the reply and the log agree on where the altars are
   const listedKeys = new Set(listed.map((a) => `${a.x},${a.y},${a.z}`));
   check(placed.every((p) => listedKeys.has(`${p.x},${p.y},${p.z}`)),
@@ -148,12 +175,12 @@ async function main() {
   bot.chats.length = 0;
   const t1 = Date.now();
   bot.chat('/customweapon altar seed 600');
-  const again = await waitChat(bot, /Built \d+ altar\(s\)\. \d+ known in total/, 60000);
+  const again = await waitChat(bot, /Built \d+ altar\(s\)\. \d+ known in total/, 180000);
   console.log(`   second run took ${((Date.now() - t1) / 1000).toFixed(1)}s  reply: ${again}`);
-  check(!!again && /Built 0 altar\(s\)\. 7 known in total/.test(again),
-      'the second seed builds nothing and still knows 7', again || '(no reply)');
+  check(!!again && new RegExp(`Built 0 altar\\(s\\)\\. ${TOTAL} known in total`).test(again),
+      `the second seed builds nothing and still knows ${TOTAL}`, again || '(no reply)');
   await sleep(1500);
-  check(placedLines().length === 7, 'no new "Weapon altar placed" lines after the second run',
+  check(placedLines().length === TOTAL, 'no new "Weapon altar placed" lines after the second run',
       `${placedLines().length}`);
 
   console.log('\n== 4. /customweapon altar find ==');

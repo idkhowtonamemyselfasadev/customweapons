@@ -340,9 +340,10 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
                 }
                 context.getSource().sendSuccess(() -> Component.literal("Released ")
                         .append(weapon.displayName())
-                        .append(Component.literal(" (was " + released.owner()
-                                + "). It can be forged again, and any copy still in an "
-                                + "inventory now counts as the real one.")
+                        .append(Component.literal(" (was " + released.owner() + "; "
+                                + CLAIMS.count(weapon.id()) + " of " + config.weapon_copies
+                                + " still claimed). It can be forged again, and any copy still "
+                                + "in an inventory now counts as a real one.")
                                 .withStyle(ChatFormatting.GRAY)), true);
                 return 1;
             }));
@@ -411,12 +412,12 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
         for (CustomWeapon weapon : Weapons.ALL) {
             targets.then(Commands.literal(weapon.id()).executes(context -> {
                 Collection<ServerPlayer> players = EntityArgument.getPlayers(context, "targets");
-                if (config.unique_weapons && CLAIMS.isClaimed(weapon.id())) {
-                    Claims.Claim claim = CLAIMS.claimOf(weapon.id());
+                if (config.unique_weapons && CLAIMS.isFull(weapon.id(), config.weapon_copies)) {
                     context.getSource().sendFailure(Component.literal("")
                             .append(weapon.displayName())
-                            .append(Component.literal(" already exists on this world, forged by "
-                                    + claim.owner() + ". Use /customweapon unclaim "
+                            .append(Component.literal(" already exists " + config.weapon_copies
+                                    + " time(s) on this world, forged by " + CLAIMS.owners(weapon.id())
+                                    + ". Use /customweapon unclaim weapon "
                                     + weapon.id() + " first.")));
                     return 0;
                 }

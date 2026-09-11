@@ -238,17 +238,33 @@ public final class WeaponsConfig {
 
     // -------------------------------------------------------------------- servers
     /**
-     * One of each weapon on the whole world, ever. A second one, however it was made, is
-     * turned back into its parts and its materials handed back.
+     * A fixed number of each weapon on the whole world ({@code weapon_copies}), ever. One
+     * more, however it was made, is turned back into its parts and its materials handed back.
      */
     public boolean unique_weapons = true;
+    /**
+     * How many of each weapon the world may hold while {@code unique_weapons} is on. Three
+     * means three Bloodletters can exist, forged at three temples or crafted; a fourth
+     * reverts. Counted across altars and crafting tables together.
+     */
+    public int weapon_copies = 3;
     /**
      * A player may carry only one legendary at a time. A second one, however it arrived,
      * is dropped at their feet with a note; the one they had first is the one they keep.
      */
     public boolean one_weapon_per_player = true;
-    /** One temple per weapon too, so the ten of them are the map's landmarks. */
-    public boolean one_altar_per_weapon = true;
+    /**
+     * How many temples generate for each weapon; 0 means as many as the world has room for.
+     * Three temples are three forgings: an altar that has been used is gone.
+     */
+    public int altars_per_weapon = 3;
+    /**
+     * One of each weapon's temples generates within this many blocks of the world spawn, so
+     * every weapon has a temple a new player can walk to; the rest go anywhere. A far-off
+     * region never takes a weapon's last temple while its near one is still owed. 0 turns
+     * the rule off.
+     */
+    public int altar_near_spawn_radius = 1200;
     /** Tell everyone when a legendary is forged. */
     public boolean announce_forging = true;
     /**
