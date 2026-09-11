@@ -80,7 +80,12 @@ counterpart on raw damage, and the ability is on top. All of it is in the config
 - Built on a netherite **axe**, not a mace: a mace's fall-distance smash would stack on top
   of the slam and blow past the balance ceiling. The axe keeps the vanilla shield disable.
 
-### Frostbrand — freeze and shatter
+### Frostbrand — the ice beam, and frost on every hit
+
+- **Ice Beam** (right-click, 8 s): a ray of ice up to 24 blocks along your look. The first
+  thing it touches takes 6.0, is **frozen solid for 3 s** - the ice closes around it, it
+  cannot move or jump - and the ice bursts when it thaws. A beam that hits nothing still
+  costs the cooldown.
 
 - Every hit adds **frost** — vanilla's own powder-snow freeze counter, so a player sees the
   frost creep in from the edges of the screen and a mob shivers — and Slowness II for 2 s.
@@ -267,6 +272,7 @@ CustomWeapons ready: 4 weapons craftable
 | Command | What it does |
 |---|---|
 | `/customweapon give <players> <weapon>` | Hands out a finished weapon |
+| `/customweapon altar seed [radius]` | Builds the altars a world that was pre-generated before the mod never grew: walks every region within the radius (2,500 by default), loads its one chosen chunk and lets placement run, then lists the temples |
 | `/customweapon list` | The seven weapons and whether each is enabled |
 | `/customweapon altar place <weapon>` | Builds an altar where you stand |
 | `/customweapon altar find` | Coordinates of the nearest known altar |

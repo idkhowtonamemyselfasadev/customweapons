@@ -756,6 +756,141 @@ async function main() {
     check(frostLeft === 0, 'no tagged displays remain 3s after the shatter', `${frostLeft} on the server`);
   }
 
+  // ---- Frostbrand Ice Beam: right-click freezes the first living thing along the look
+  // ray (6.0 magic, 60 ticks held in ice via the shared stun), 8 s cooldown, and a ray
+  // into the sky is logged as a miss.
+  console.log('   -- Frostbrand Ice Beam');
+  // Dummy still carries the Resistance III from the top of the section, which would cut
+  // the 6.0 to 2.4: no effects and no armour while the beam's damage is measured, and the
+  // resistance goes back on afterwards for the Hellfire blast.
+  cmd('effect clear Dummy');
+  cmd('clear Dummy');
+  cmd('tp Smith 0 -59 0');
+  cmd('tp Dummy 6 -59 0');
+  await healDummy();
+  await sleep(800);
+  if (!smith.heldItem || smith.heldItem.name !== 'iron_sword') await equipByName(smith, 'iron_sword');
+  const beamTarget = smith.players['Dummy'] && smith.players['Dummy'].entity;
+  if (!beamTarget) {
+    fail('Smith can see Dummy for the Ice Beam');
+  } else {
+    const beamDist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+    const slowId = MC_DATA.effectsByName.Slowness.id;
+    console.log(`   Smith at ${smith.entity.position}, Dummy at ${dummy.entity.position} `
+        + `(${beamDist(smith.entity.position, dummy.entity.position).toFixed(1)} blocks), ${dummy.health} hp, `
+        + `effects ${JSON.stringify(dummy.entity.effects || {})}`);
+    await smith.lookAt(beamTarget.position.offset(0, 1.2, 0), true);
+    await sleep(300);
+    smith.actionBars.length = 0;
+    dummy.actionBars.length = 0;
+    const beamBefore = dummy.health;
+    const beamFxAt = Date.now();
+    smith.activateItem();
+    const beamLanded = await waitUntil(() => dummy.health < beamBefore, 1000);
+    const beamHitAt = Date.now();
+    check(beamLanded, 'the ice beam hits Dummy within 1 s (health drops)');
+    // Where Dummy stands ~3 ticks after the hit is the spot the stun holds it on.
+    await sleep(150);
+    const frozenAt = dummy.entity.position.clone();
+    const toldFrozen = await waitUntil(() => dummy.actionBars.some((m) => m.trim() === 'Frozen'), 500);
+    check(toldFrozen, 'Dummy is told "Frozen" on its action bar', JSON.stringify(dummy.actionBars.slice(-3)));
+    const beamSlow = (dummy.entity.effects || {})[slowId];
+    if (Object.keys(dummy.entity.effects || {}).length === 0) {
+      console.log('   (skip) mineflayer reported no effects on Dummy; slowness not checked');
+    } else {
+      check(beamSlow && beamSlow.amplifier === 6, 'Dummy carries Slowness VII while frozen',
+          'effects on the client: ' + JSON.stringify(dummy.entity.effects));
+    }
+    await waitUntil(() => smith.actionBars.some((m) => /Ice Beam/.test(m)), 700);
+    const beamDrop = beamBefore - dummy.health;
+    console.log(`   Dummy ${beamBefore} -> ${dummy.health} (-${beamDrop.toFixed(1)}); Smith bar `
+        + JSON.stringify(smith.actionBars) + '; Dummy bar ' + JSON.stringify(dummy.actionBars));
+    check(Math.abs(beamDrop - 6) <= 1.5, 'the ice beam deals 6.0 (no armour, no effects)', `${beamDrop.toFixed(1)} hp`);
+    check(smith.actionBars.some((m) => /Ice Beam/.test(m)), 'Smith sees "Ice Beam" on the action bar',
+        smith.actionBars.slice(-1)[0] || '');
+    const beamFx = fxSince(dummy, beamFxAt, 1000, 2000);
+    const beamFxSmith = fxSince(smith, beamFxAt, 1000, 2000);
+    console.log(`   frost_beam: Dummy was sent ${beamFx.spawned} block displays within 1s (Smith ${beamFxSmith.spawned}), `
+        + `${beamFx.gone} of them removed within 2s`);
+    check(beamFx.spawned >= 5, 'the beam spawns the frost_beam displays (>= 5)', `${beamFx.spawned}`);
+
+    // Held fast: try to walk away from Smith (who stands at -x) for 2.5 s of the 3 s freeze.
+    await dummy.lookAt(frozenAt.offset(10, 1.6, 0), true);
+    const movesBefore = dummy.forcedMoves;
+    const walkStart = Date.now();
+    let beamMaxDrift = 0;
+    let serverPinned = null;
+    dummy.setControlState('forward', true);
+    while (Date.now() - walkStart < 2500) {
+      await sleep(50);
+      beamMaxDrift = Math.max(beamMaxDrift, beamDist(dummy.entity.position, frozenAt));
+      if (serverPinned === null && Date.now() - walkStart >= 1500) {
+        serverPinned = fxCount('',
+            `name=Dummy,x=${frozenAt.x.toFixed(2)},y=${frozenAt.y.toFixed(2)},z=${frozenAt.z.toFixed(2)},distance=..0.5`);
+      }
+    }
+    dummy.setControlState('forward', false);
+    const beamEndDrift = beamDist(dummy.entity.position, frozenAt);
+    const pinnedOnServer = serverPinned === null ? NaN : await serverPinned;
+    console.log(`   frozen at ${frozenAt}, now at ${dummy.entity.position}; max drift ${beamMaxDrift.toFixed(3)}, `
+        + `end drift ${beamEndDrift.toFixed(3)}; ${dummy.forcedMoves - movesBefore} position packets from the server; `
+        + `server sees Dummy within 0.5: ${pinnedOnServer}`);
+    check(beamMaxDrift <= 0.5 && beamEndDrift <= 0.5,
+        'while frozen Dummy cannot walk away for 2.5 s (stays within 0.5 of the spot)',
+        `max ${beamMaxDrift.toFixed(3)}, end ${beamEndDrift.toFixed(3)}`);
+    check(pinnedOnServer === 1, 'the server also has Dummy within 0.5 of the spot mid-freeze', `count ${pinnedOnServer}`);
+
+    // 60 ticks = 3 s. At 3.5 s the ice is gone and walking works again.
+    await sleep(Math.max(0, beamHitAt + 3500 - Date.now()));
+    const thawSlow = (dummy.entity.effects || {})[slowId];
+    console.log(`   after the freeze: slowness on the client: ${JSON.stringify(thawSlow || null)}`);
+    const thawedAt = dummy.entity.position.clone();
+    dummy.setControlState('forward', true);
+    await sleep(1000);
+    dummy.setControlState('forward', false);
+    const thawWalked = beamDist(dummy.entity.position, thawedAt);
+    check(thawWalked > 0.8, 'once the freeze ends Dummy can walk again (1 s forward > 0.8 blocks)',
+        `${thawWalked.toFixed(2)} blocks`);
+
+    // A second beam straight away, well inside the 8 s cooldown: refused with the time left.
+    smith.actionBars.length = 0;
+    const cooldownBefore = dummy.health;
+    smith.activateItem();
+    await sleep(800);
+    console.log('   second use inside the cooldown: Smith bar ' + JSON.stringify(smith.actionBars)
+        + `; Dummy ${cooldownBefore} -> ${dummy.health}`);
+    check(smith.actionBars.some((m) => /^Ice Beam\s+[\d.]+s$/.test(m.trim())),
+        'a second beam on cooldown is refused with the time left',
+        smith.actionBars.filter((m) => /Ice Beam/.test(m)).slice(-1)[0] || 'no Ice Beam note');
+    check(dummy.health === cooldownBefore, 'the refused beam does no damage', `${cooldownBefore} -> ${dummy.health}`);
+
+    // A miss: once the cooldown is over, fire into the sky (60 degrees up). The server logs
+    // it as victim=miss and Dummy is untouched.
+    await sleep(Math.max(0, beamHitAt + 8500 - Date.now()));
+    cmd('tp Dummy 6 -59 0');
+    await sleep(600);
+    await smith.look(smith.entity.yaw, Math.PI / 3, true);   // mineflayer pitch +60 deg = notchian -60, up
+    await sleep(300);
+    const logOffset = fs.readFileSync(RUN + '/test.log', 'utf8').length;
+    smith.actionBars.length = 0;
+    const missBefore = dummy.health;
+    smith.activateItem();
+    const missLogged = await waitUntil(() =>
+        /ABILITY frostbeam player=Smith victim=miss/.test(fs.readFileSync(RUN + '/test.log', 'utf8').slice(logOffset)), 1500);
+    await sleep(500);
+    const missTail = fs.readFileSync(RUN + '/test.log', 'utf8').slice(logOffset).split('\n')
+        .filter((l) => /ABILITY frostbeam/.test(l)).map((l) => l.replace(/^.*?(ABILITY)/, '$1'));
+    console.log(`   into the sky: log ${JSON.stringify(missTail)}; Smith bar ${JSON.stringify(smith.actionBars)}; `
+        + `Dummy ${missBefore} -> ${dummy.health}`);
+    check(missLogged, 'a beam into the sky is logged as victim=miss', JSON.stringify(missTail));
+    check(dummy.health === missBefore, 'the missed beam changes nothing on Dummy', `${missBefore} -> ${dummy.health}`);
+    check(smith.actionBars.some((m) => m.trim() === 'Ice Beam'), 'a missed beam still reports "Ice Beam"',
+        JSON.stringify(smith.actionBars));
+  }
+  // Resistance III back on for the rest of the section (the Hellfire blast on the head).
+  cmd('effect give Dummy minecraft:resistance 120 2 true');
+  await healDummy();
+
   // ---- Stormpiercer vs a creeper: a fully drawn hit executes it outright.
   console.log('   -- Stormpiercer execution');
   cmd('clear Archer');

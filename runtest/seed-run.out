@@ -1,0 +1,88 @@
+== booting 1.21.11 Fabric server on port 25603 (pid 31120) ==
+[14:00:27] [Server thread/INFO]: CustomWeapons ready: 7 weapons craftable, 0 altars known
+== 1. Seeder joins and is opped ==
+   altars were off at boot; switched on via reload
+   altars already placed organically before seeding: 0
+
+== 2. /customweapon altar seed 600 ==
+   seed run took 0.2s
+   PASS  the seed command replied within 60 s  Built 7 altar(s). 7 known in total:
+   reply: Built 7 altar(s). 7 known in total:
+   - Tidecaller  -88 -57 -200
+   - Aegis Hammer  200 -57 56
+   - Frostbrand  296 -57 -504
+   - Gale Edge  -40 -57 -56
+   - Bloodletter  104 -57 -184
+   - Stormpiercer  -136 -57 -72
+   - Hellfire  -264 -57 376
+   PASS  the reply says 7 altars are known in total  7
+   PASS  the seed built every altar the spawn area had not already grown  built 7 + 0 organic
+   PASS  the reply lists 7 altars with coordinates  7 lines
+   PASS  the 7 listed altars are 7 different weapons  Tidecaller, Aegis Hammer, Frostbrand, Gale Edge, Bloodletter, Stormpiercer, Hellfire
+   PASS  every altar lies within the requested radius (plus one chunk of slack)
+   7 "Weapon altar placed" lines in test.log
+   PASS  test.log has exactly 7 "Weapon altar placed" lines  7
+   PASS  one placed line per weapon id  aegis_hammer, bloodletter, frostbrand, gale_edge, hellfire, stormpiercer, tidecaller
+   PASS  the coordinates in the reply match the coordinates in the log
+
+== 3. seed again: idempotent ==
+   second run took 0.2s  reply: Built 0 altar(s). 7 known in total:
+   PASS  the second seed builds nothing and still knows 7  Built 0 altar(s). 7 known in total:
+   PASS  no new "Weapon altar placed" lines after the second run  7
+
+== 4. /customweapon altar find ==
+   Nearest altar: gale_edge at -40 -57 -56
+   PASS  find names one of the seeded altars
+
+== 5. the temples are really there ==
+   PASS  hellfire: a lodestone sits at -264 -57 376  lodestone
+   hellfire: entities within 3.5 of the altar {"armor_stand":5}
+   PASS  hellfire: exactly one label per line (armor_stand)  5 label entities: gray | white | white | white | white
+   PASS  hellfire: the labels carry the altar name
+   PASS  tidecaller: a lodestone sits at -88 -57 -200  lodestone
+   tidecaller: entities within 3.5 of the altar {"armor_stand":5}
+   PASS  tidecaller: exactly one label per line (armor_stand)  5 label entities: gray | white | white | white | white
+   PASS  tidecaller: the labels carry the altar name
+   PASS  bloodletter: a lodestone sits at 104 -57 -184  lodestone
+   bloodletter: entities within 3.5 of the altar {"armor_stand":5}
+   PASS  bloodletter: exactly one label per line (armor_stand)  5 label entities: gray | white | white | white | white
+   PASS  bloodletter: the labels carry the altar name
+   PASS  stormpiercer: a lodestone sits at -136 -57 -72  lodestone
+   stormpiercer: entities within 3.5 of the altar {"armor_stand":5}
+   PASS  stormpiercer: exactly one label per line (armor_stand)  5 label entities: gray | white | white | white | white
+   PASS  stormpiercer: the labels carry the altar name
+   PASS  frostbrand: a lodestone sits at 296 -57 -504  lodestone
+   frostbrand: entities within 3.5 of the altar {"armor_stand":5}
+   PASS  frostbrand: exactly one label per line (armor_stand)  5 label entities: gray | white | white | white | white
+   PASS  frostbrand: the labels carry the altar name
+   PASS  aegis_hammer: a lodestone sits at 200 -57 56  lodestone
+   aegis_hammer: entities within 3.5 of the altar {"armor_stand":5}
+   PASS  aegis_hammer: exactly one label per line (armor_stand)  5 label entities: gray | white | white | white | white
+   PASS  aegis_hammer: the labels carry the altar name
+   PASS  gale_edge: a lodestone sits at -40 -57 -56  lodestone
+   gale_edge: entities within 3.5 of the altar {"armor_stand":5}
+   PASS  gale_edge: exactly one label per line (armor_stand)  5 label entities: gray | white | white | white | white
+   PASS  gale_edge: the labels carry the altar name
+   revisit hellfire: 5 label stands after its chunk was unloaded and reloaded
+   PASS  hellfire revisited: still exactly one label per line  5
+   PASS  the seeded altar is a full temple  600 structural blocks
+   label entity kinds seen: {"armor_stand":35}
+
+== summary ==
+   altars: hellfire -264 -57 376 | tidecaller -88 -57 -200 | bloodletter 104 -57 -184 | stormpiercer -136 -57 -72 | frostbrand 296 -57 -504 | aegis_hammer 200 -57 56 | gale_edge -40 -57 -56
+   seed run: 0.2s, built 7, 7 known
+
+RESULT: PASS
+
+=========== SERVER LOG: altars ===========
+[14:00:34] [Server thread/INFO]: Weapon altar placed: hellfire at -264 -57 376
+[14:00:34] [Server thread/INFO]: Weapon altar placed: tidecaller at -88 -57 -200
+[14:00:34] [Server thread/INFO]: Weapon altar placed: bloodletter at 104 -57 -184
+[14:00:34] [Server thread/INFO]: Weapon altar placed: stormpiercer at -136 -57 -72
+[14:00:34] [Server thread/INFO]: Weapon altar placed: frostbrand at 296 -57 -504
+[14:00:34] [Server thread/INFO]: Weapon altar placed: aegis_hammer at 200 -57 56
+[14:00:34] [Server thread/INFO]: Weapon altar placed: gale_edge at -40 -57 -56
+
+=========== EXCEPTIONS ===========
+(end)
+exit=0

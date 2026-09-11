@@ -12,6 +12,12 @@
     "bypassesPlayerLimit": false
   },
   {
+    "uuid": "17d3686f-e81f-342f-b6dd-a81eda161715",
+    "name": "Seeder",
+    "level": 4,
+    "bypassesPlayerLimit": false
+  },
+  {
     "uuid": "caad701f-2900-3c92-bdf6-96b24acb5485",
     "name": "Smith",
     "level": 4,

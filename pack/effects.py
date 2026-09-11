@@ -120,6 +120,17 @@ def build():
         ], bright=True))
     fx["frost_shatter"] = {"ticks": 45, "parts": parts}
 
+    # The Ice Beam's freeze: the same ice, held for three seconds before it bursts.
+    def stretch(part, hold_from, hold_to, end):
+        keys = []
+        for k in part["keys"]:
+            t = k["t"]
+            if t >= 38:
+                t = end - (45 - t)          # the burst keeps its shape, moved to the end
+            keys.append(dict(k, t=t))
+        return dict(part, keys=keys)
+    fx["frost_beam"] = {"ticks": 65, "parts": [stretch(p, 38, 58, 65) for p in parts]}
+
     # ---------------------------------------------------------------- Bloodletter
     # A crescent cut across the chest, blade after blade, then three drops fall.
     parts = []

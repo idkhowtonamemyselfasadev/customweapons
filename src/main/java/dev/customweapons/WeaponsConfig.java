@@ -115,6 +115,14 @@ public final class WeaponsConfig {
     public int frost_slowness_ticks = 40;
     public int frost_slowness_amplifier = 1;
     public double shatter_damage = 8.0;
+    /**
+     * The ice beam, on right-click: a ray up to this far that freezes the first thing it
+     * touches solid - the ice closes around it, it cannot move, and it takes the damage.
+     */
+    public double frost_beam_range = 24.0;
+    public double frost_beam_damage = 6.0;
+    public int frost_beam_freeze_ticks = 60;
+    public int frost_beam_cooldown_ticks = 160;
     /** How long a shattered target stays frozen solid (rooted), and the pause before the frost can build again. */
     public int shatter_slowness_ticks = 60;
     public int shatter_slowness_amplifier = 3;

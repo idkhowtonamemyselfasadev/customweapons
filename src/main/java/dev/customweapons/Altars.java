@@ -139,6 +139,56 @@ public final class Altars {
         save();
     }
 
+    /**
+     * Seeds altars into a world that already exists.
+     *
+     * <p>Altars are built when a region's one candidate chunk is loaded, and pre-generating
+     * a world does not load anything for the mod to see. This walks every region within the
+     * radius, loads its candidate chunk, and lets the usual placement run - so the result is
+     * exactly the set of altars the world would have grown on its own. Regions are visited
+     * in a seeded shuffle rather than in rings, so the one-per-weapon temples end up spread
+     * across the map instead of clustered around the player.
+     *
+     * @return how many altars were built
+     */
+    public int seed(ServerLevel level, BlockPos around, int radiusBlocks, WeaponsConfig config) {
+        int spacing = Math.max(2, config.altar_spacing_chunks);
+        int regionRadius = Math.max(1, radiusBlocks / (spacing * 16) + 1);
+        int centreX = Math.floorDiv(SectionPos.blockToSectionCoord(around.getX()), spacing);
+        int centreZ = Math.floorDiv(SectionPos.blockToSectionCoord(around.getZ()), spacing);
+        List<int[]> regions = new ArrayList<>();
+        for (int rx = centreX - regionRadius; rx <= centreX + regionRadius; rx++) {
+            for (int rz = centreZ - regionRadius; rz <= centreZ + regionRadius; rz++) {
+                regions.add(new int[] {rx, rz});
+            }
+        }
+        java.util.Collections.shuffle(regions, new Random(level.getSeed() ^ SALT));
+        int before = sites.size();
+        for (int[] region : regions) {
+            Random random = new Random(level.getSeed()
+                    ^ (region[0] * 341873128712L + region[1] * 132897987541L) ^ SALT);
+            int cx = region[0] * spacing + random.nextInt(spacing);
+            int cz = region[1] * spacing + random.nextInt(spacing);
+            if (Math.hypot(cx * 16 - around.getX(), cz * 16 - around.getZ()) > radiusBlocks) {
+                continue;
+            }
+            level.getChunk(cx, cz);   // loads it from disk, or generates it
+            ChunkPos chunk = new ChunkPos(cx, cz);
+            try {
+                considerChunk(level, chunk, config);
+                labelSitesIn(level, chunk);
+            } catch (Exception e) {
+                CustomWeapons.LOGGER.error("Altar seeding failed at {}: {}", chunk, e.toString());
+            }
+            if (config.one_altar_per_weapon && Weapons.ALL.stream()
+                    .filter(w -> w.enabled(config)).allMatch(w -> hasAltarFor(w.id()))) {
+                break;   // every weapon has its temple; nothing more would be built
+            }
+        }
+        save();
+        return sites.size() - before;
+    }
+
     private void considerChunk(ServerLevel level, ChunkPos chunk, WeaponsConfig config) {
         int spacing = Math.max(2, config.altar_spacing_chunks);
         int regionX = Math.floorDiv(chunk.x, spacing);
@@ -471,6 +521,23 @@ public final class Altars {
 
     /** Re-labels any altar in a chunk that has just come back. */
     private void labelSitesIn(ServerLevel level, ChunkPos chunk) {
+        boolean any = false;
+        for (Site site : sites.values()) {
+            if (SectionPos.blockToSectionCoord(site.x()) == chunk.x
+                    && SectionPos.blockToSectionCoord(site.z()) == chunk.z) {
+                any = true;
+            }
+        }
+        if (!any) {
+            return;
+        }
+        // A chunk's blocks arrive before its entities. Counting the labels before the stored
+        // ones are in would find none and add five more on top, every time the chunk came
+        // back - so a chunk whose entities are not in yet is looked at again next tick.
+        if (!level.areEntitiesLoaded(chunk.toLong())) {
+            pending.add(chunk);
+            return;
+        }
         for (Site site : new ArrayList<>(sites.values())) {
             if (SectionPos.blockToSectionCoord(site.x()) == chunk.x
                     && SectionPos.blockToSectionCoord(site.z()) == chunk.z) {
@@ -636,6 +703,10 @@ public final class Altars {
             }
         }
         inventory.setChanged();
+    }
+
+    public java.util.Collection<Site> all() {
+        return sites.values();
     }
 
     public int count() {

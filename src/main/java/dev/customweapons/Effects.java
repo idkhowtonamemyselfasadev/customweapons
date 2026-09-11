@@ -139,6 +139,48 @@ public final class Effects {
         lines.add(line);
     }
 
+    /** A ray of small blocks from one point to another, thinning out over {@code ticks}. */
+    public void beam(ServerLevel level, Vec3 from, Vec3 to, String blockId, int count, float size, int ticks) {
+        if (!CustomWeapons.config().world_effects) {
+            return;
+        }
+        Block block = BuiltInRegistries.BLOCK.getOptional(Identifier.parse(blockId)).orElse(Blocks.PACKED_ICE);
+        List<PartSpec> parts = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            float u = (i + 0.5f) / count;
+            Vec3 p = from.lerp(to, u);
+            float[] c = {(float) (p.x - from.x), (float) (p.y - from.y), (float) (p.z - from.z)};
+            float spin = i * 37f;
+            List<Key> keys = List.of(
+                    new Key(0, c, new float[] {0.01f, 0.01f, 0.01f}, new float[] {45, spin, 45}),
+                    new Key(1 + i * (float) ticks / (2f * count), c, new float[] {size, size, size}, new float[] {45, spin + 90, 45}),
+                    new Key(ticks, new float[] {c[0], c[1] - 0.3f, c[2]}, new float[] {0.01f, 0.01f, 0.01f}, new float[] {45, spin + 270, 45}));
+            parts.add(new PartSpec(blockId, false, true, "linear", null, keys));
+        }
+        EffectSpec spec = new EffectSpec(ticks, parts);
+        List<Part> made = new ArrayList<>(count);
+        for (PartSpec p : parts) {
+            Display.BlockDisplay display = EntityType.BLOCK_DISPLAY.create(level, EntitySpawnReason.TRIGGERED);
+            if (display == null) {
+                continue;
+            }
+            ((BlockDisplayInvoker) display).customweapons$setBlockState(block.defaultBlockState());
+            DisplayInvoker d = (DisplayInvoker) display;
+            d.customweapons$setTransformationInterpolationDuration(1);
+            d.customweapons$setPosRotInterpolationDuration(1);
+            d.customweapons$setViewRange(1.5f);
+            d.customweapons$setShadowRadius(0f);
+            d.customweapons$setBrightnessOverride(new Brightness(15, 15));
+            display.setNoGravity(true);
+            display.addTag(TAG);
+            made.add(new Part(p, display));
+        }
+        Playing instance = new Playing(spec, made, from, null);
+        apply(instance, 0, true);
+        made.forEach(part -> level.addFreshEntity(part.entity));
+        playing.add(instance);
+    }
+
     private static void string(Line line, boolean initial) {
         Vec3 a = line.from.position().add(0, line.from.getBbHeight() * 0.6, 0);
         Vec3 b = line.to.position().add(0, line.to.getBbHeight() * 0.5, 0);
