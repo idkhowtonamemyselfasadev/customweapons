@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "cwshot",
+  "version": "${version}",
+  "name": "CustomWeapons screenshot rig",
+  "description": "Test-only client mod: joins a server, plays a script of key presses and commands, and takes screenshots.",
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": { "client": [ "dev.cwshot.ShotRig" ] },
+  "depends": { "fabricloader": ">=${loader_version}", "minecraft": "${minecraft_version}", "java": ">=21", "fabric-api": "*" }
+}

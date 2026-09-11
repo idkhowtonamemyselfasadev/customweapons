@@ -147,6 +147,16 @@ public final class Hellfire extends CustomWeapon {
         // creeper's or a fireball's explosion credits the creeper or the ghast.
         level.explode(projectile, at.x, at.y, at.z, (float) config.hellfire_explosion_power,
                 config.hellfire_fire, Level.ExplosionInteraction.NONE);
+        // The burst sits on the ground under the point of impact, so the scorch lies flat.
+        Vec3 ground = at;
+        for (int dy = 0; dy < 4; dy++) {
+            net.minecraft.core.BlockPos below = net.minecraft.core.BlockPos.containing(at.x, at.y - dy - 0.01, at.z);
+            if (!level.getBlockState(below).isAir()) {
+                ground = new Vec3(at.x, below.getY() + 1.0, at.z);
+                break;
+            }
+        }
+        CustomWeapons.effects().play(level, "hell_burst", ground, null);
         level.sendParticles(ParticleTypes.LAVA, at.x, at.y, at.z, 12, 0.3, 0.3, 0.3, 0.1);
         projectile.discard();
         if (config.log_abilities) {

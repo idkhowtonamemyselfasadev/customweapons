@@ -151,6 +151,10 @@ public final class AegisHammer extends CustomWeapon {
         CustomWeapons.cooldowns().set(player, SLAM, config.slam_cooldown_ticks, weapon);
         CustomWeapons.animations().play(player, this, config);
 
+        // The flash sits where the head lands: a block in front of the player.
+        Vec3 ahead = player.getLookAngle().multiply(1, 0, 1).normalize();
+        CustomWeapons.effects().play(level, "slam_wave",
+                player.position().add(ahead.x * 0.2, 0, ahead.z * 0.2), null);
         level.playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.MACE_SMASH_GROUND, SoundSource.PLAYERS, 1.0f, 0.8f);
         level.playSound(null, player.getX(), player.getY(), player.getZ(),

@@ -324,17 +324,31 @@ time either way. The link and hash live in the config:
 "pack_required": true,
 "pack_kick_message": "This server needs its resource pack. Click Yes on the download prompt, or set Server Resource Packs to Enabled in the server's edit screen.",
 "pack_offer_on_join": true,
-"pack_url": "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.1.0/CustomWeapons-Models.zip",
-"pack_sha1": "d8eef744ca449c55bd9aea289ce8c2ed2cc9a600",
+"pack_url": "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.2.0/CustomWeapons-Models.zip",
+"pack_sha1": "0cf8646982e687ce2813ddd38a8b59b6426f0c1a",
 "pack_offer_message": "This server has 3D models for the legendary weapons. Want them?"
 ```
+
+**World effects.** Every ability also plays a real 3D effect in the world, built from
+block-display entities the server moves along keyframes each tick, so every player sees it
+whether or not they have the pack: the ice that closes around a target frozen solid by the
+Frostbrand and bursts when the root ends, a crescent cut and dripping blood from the
+Bloodletter, a ring of air from the Gale Edge dash, a shockwave and flying debris from the
+Ground Slam, water thrown up and a glowing rope for the Tidecaller's harpoon, four
+lightning rods circling a shocked target, and fire, embers and a scorch mark from a
+Hellfire blast. Authored in `pack/effects.py`, shipped as `effects.json` inside the jar,
+and shown in the preview's **World effects** section. `world_effects` in the config turns
+them off.
 
 **Attack animations.** For half a second after an ability fires, the mod counts a frame
 number 1-10 on the held weapon's `custom_model_data` and the pack has one pose per frame:
 a slash for the swords, a lunge for the Gale Edge and Tidecaller, a raise-and-smash for
 the hammer, recoil for the bow and crossbow. Twenty frames a second, first and third
-person, seen by everyone with the pack. `animation_ticks` in the config sets the length,
-0 turns it off; the poses live in `pack/build.py` under `ANIMS`, and the preview's
+person, seen by everyone with the pack. Each frame also carries its own effect geometry
+on the weapon: a fan of afterimages behind a sword cut, speed lines on a lunge, sparks
+off the hammer, lightning crawling up the bowstring, a muzzle flash on the crossbow.
+`animation_ticks` in the config sets the length, 0 turns it off; the poses live in
+`pack/build.py` under `ANIMS`, the frame geometry in `pack/weapons.py`, and the preview's
 **Attack** button plays them.
 
 The hash has to change with the file, or clients keep a stale cached copy. Leave vanilla's

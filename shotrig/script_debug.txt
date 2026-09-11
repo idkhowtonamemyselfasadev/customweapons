@@ -1,0 +1,52 @@
+wait 60
+cmd gamemode survival
+cmd time set 6000
+cmd weather clear
+cmd kill @e[type=!player]
+cmd tp @s 0.5 -60 0.5 0 12
+cmd clear @s
+wait 20
+look 0 12
+cmd item replace entity @s hotbar.0 with minecraft:netherite_sword[custom_model_data={strings:["cw:bloodletter"]}]
+cmd item replace entity @s hotbar.1 with minecraft:netherite_sword[custom_model_data={strings:["cw:bloodletter"],floats:[2.0]}]
+cmd item replace entity @s hotbar.2 with minecraft:netherite_sword[custom_model_data={strings:["cw:bloodletter"],floats:[5.0]}]
+cmd item replace entity @s hotbar.3 with minecraft:netherite_sword[custom_model_data={strings:["cw:bloodletter"],floats:[6.0]}]
+cmd item replace entity @s hotbar.4 with minecraft:netherite_sword[custom_model_data={strings:["cw:bloodletter"],floats:[10.0]}]
+cmd item replace entity @s hotbar.5 with minecraft:crossbow[custom_model_data={strings:["cw:hellfire"],floats:[2.0]}]
+cmd item replace entity @s hotbar.6 with minecraft:netherite_axe[custom_model_data={strings:["cw:aegis_hammer"],floats:[6.0]}]
+cmd item replace entity @s hotbar.7 with minecraft:iron_sword[custom_model_data={strings:["cw:frostbrand"],floats:[6.0]}]
+wait 20
+hotbar 0
+wait 15
+shot h0_idle
+camera back
+wait 5
+shot h0_idle_third
+camera first
+hotbar 1
+wait 15
+shot h1_f2
+hotbar 2
+wait 15
+shot h2_f5
+hotbar 3
+wait 15
+shot h3_f6
+camera back
+wait 5
+shot h3_f6_third
+camera first
+hotbar 4
+wait 15
+shot h4_f10
+hotbar 5
+wait 15
+shot h5_hellfire_f2
+hotbar 6
+wait 15
+shot h6_hammer_f6
+hotbar 7
+wait 15
+shot h7_frost_f6
+wait 5
+quit

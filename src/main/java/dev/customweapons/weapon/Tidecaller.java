@@ -109,6 +109,7 @@ public final class Tidecaller extends CustomWeapon {
         Hurt.deal(victim, victim.damageSources().indirectMagic(attacker, attacker),
                 (float) config.tide_wet_bonus_damage);
         if (victim.level() instanceof ServerLevel level) {
+            CustomWeapons.effects().play(level, "tide_splash", victim);
             level.sendParticles(ParticleTypes.SPLASH,
                     victim.getX(), victim.getY() + victim.getBbHeight() * 0.5, victim.getZ(),
                     20, 0.3, 0.3, 0.3, 0.1);
@@ -162,6 +163,9 @@ public final class Tidecaller extends CustomWeapon {
         CustomWeapons.cooldowns().set(shooter, HARPOON, config.harpoon_cooldown_ticks);
 
         if (victim.level() instanceof ServerLevel level) {
+            // A glowing rope from thrower to target, for as long as the pull takes.
+            CustomWeapons.effects().line(level, shooter, victim, "minecraft:sea_lantern", 12, 0.16f, 12);
+            CustomWeapons.effects().play(level, "tide_splash", victim);
             level.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
                     SoundEvents.TRIDENT_RETURN, SoundSource.PLAYERS, 1.0f, 0.6f);
             level.playSound(null, victim.getX(), victim.getY(), victim.getZ(),

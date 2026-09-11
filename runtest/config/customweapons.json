@@ -64,5 +64,6 @@
   "altars_enabled": true,
   "altar_spacing_chunks": 6,
   "stat_sweep_interval_ticks": 5,
+  "world_effects": true,
   "log_abilities": true
 }

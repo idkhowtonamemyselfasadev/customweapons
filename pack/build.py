@@ -85,34 +85,31 @@ def m(name):
 FRAMES = 10
 
 ANIMS = {
-    # a wind-up over the shoulder and a cut down through the target
+    # The game already swings the arm on every attack, so these stay small: a tilt and a
+    # short push, enough to read as a wind-up and a cut without leaving the screen.
     "slash": [(0.0, (0, 0, 0), (0, 0, 0), 1.0),
-              (0.2, (-25, 15, 45), (-1.0, 1.5, -1.0), 1.0),
-              (0.55, (35, -30, -75), (2.5, -2.5, -4.0), 1.05),
-              (0.75, (20, -15, -40), (1.5, -1.5, -2.5), 1.0),
+              (0.2, (-18, 10, 28), (-0.5, 0.9, -0.4), 1.0),
+              (0.55, (22, -18, -40), (1.0, -1.0, -1.4), 1.04),
+              (0.75, (12, -9, -22), (0.5, -0.6, -0.9), 1.0),
               (1.0, (0, 0, 0), (0, 0, 0), 1.0)],
-    # a pull-back and a lunge along the blade
     "thrust": [(0.0, (0, 0, 0), (0, 0, 0), 1.0),
-               (0.25, (-10, 0, 10), (0.5, 0.5, 2.0), 1.0),
-               (0.55, (15, 0, -20), (-1.0, -0.5, -7.0), 1.05),
-               (0.8, (5, 0, -5), (-0.3, 0, -2.0), 1.0),
+               (0.25, (-8, 0, 8), (0.3, 0.3, 0.9), 1.0),
+               (0.55, (10, 0, -12), (-0.5, -0.3, -2.8), 1.04),
+               (0.8, (4, 0, -4), (-0.2, 0, -1.0), 1.0),
                (1.0, (0, 0, 0), (0, 0, 0), 1.0)],
-    # raise it high, bring it down hard, bounce
     "slam": [(0.0, (0, 0, 0), (0, 0, 0), 1.0),
-             (0.3, (-55, 0, 10), (0, 4.0, 1.0), 1.0),
-             (0.55, (70, 0, -25), (0.5, -5.0, -4.0), 1.1),
-             (0.7, (55, 0, -20), (0.5, -4.0, -3.0), 1.0),
+             (0.3, (-38, 0, 8), (0, 2.4, 0.5), 1.0),
+             (0.55, (42, 0, -14), (0.3, -2.2, -1.8), 1.08),
+             (0.7, (32, 0, -11), (0.3, -1.8, -1.4), 1.0),
              (1.0, (0, 0, 0), (0, 0, 0), 1.0)],
-    # recoil from the shot and a shake as the lightning goes
     "shot": [(0.0, (0, 0, 0), (0, 0, 0), 1.0),
-             (0.15, (-20, 5, 0), (0.5, 1.0, 2.0), 1.12),
-             (0.35, (8, -4, 0), (-0.3, 0.2, 0.6), 1.05),
-             (0.55, (-5, 3, 0), (0.2, 0.3, 0.3), 1.02),
+             (0.15, (-14, 4, 0), (0.3, 0.7, 1.2), 1.08),
+             (0.35, (6, -3, 0), (-0.2, 0.15, 0.4), 1.03),
+             (0.55, (-4, 2, 0), (0.15, 0.2, 0.2), 1.01),
              (1.0, (0, 0, 0), (0, 0, 0), 1.0)],
-    # a heavy kick back into the shoulder
     "blast": [(0.0, (0, 0, 0), (0, 0, 0), 1.0),
-              (0.15, (-30, 0, 8), (0.5, 1.5, 3.0), 1.15),
-              (0.45, (-8, 0, 2), (0.2, 0.5, 1.0), 1.05),
+              (0.15, (-20, 0, 6), (0.3, 1.0, 2.0), 1.1),
+              (0.45, (-6, 0, 2), (0.15, 0.4, 0.7), 1.03),
               (1.0, (0, 0, 0), (0, 0, 0), 1.0)],
 }
 WEAPON_ANIM = {
@@ -163,12 +160,20 @@ def frame_display(display, keys, frame):
     }
 
 
-def frame_models(weapon, display):
-    """Tiny models: the resting model as parent, one display block per frame."""
+def frame_models(weapon, builder, display):
+    """One full model per frame: the weapon, its trail or flash for that frame, and the
+    hand pose for that frame."""
     keys = ANIMS[WEAPON_ANIM[weapon]]
     out = {}
     for frame in range(1, FRAMES + 1):
-        out[f"{weapon}_f{frame}"] = {"parent": f"{NS}:item/{weapon}", "display": frame_display(display, keys, frame)}
+        model, _ = weapons.build_frame(weapon, builder, display, frame, NS)
+        model["display"] = display if os.environ.get("CW_NOPOSE") else frame_display(display, keys, frame)
+        out[f"{weapon}_f{frame}"] = model
+    if os.environ.get("CW_DEBUG_FRAMES"):
+        # 11: the resting model re-parented with frame 5's pose; 12: frame 5's geometry, resting pose
+        out[f"{weapon}_f11"] = {"parent": f"{NS}:item/{weapon}", "display": frame_display(display, keys, 5)}
+        m12, _ = weapons.build_frame(weapon, builder, display, 5, NS)
+        out[f"{weapon}_f12"] = m12
     return out
 
 
@@ -176,7 +181,8 @@ def animated(weapon, idle_tree):
     """Frame k while the mod has written k into the item, the idle tree otherwise."""
     return {
         "type": "minecraft:range_dispatch", "property": "minecraft:custom_model_data", "index": 0,
-        "entries": [{"threshold": k, "model": m(f"{weapon}_f{k}")} for k in range(1, FRAMES + 1)],
+        "entries": [{"threshold": k, "model": m(f"{weapon}_f{k}")}
+                    for k in range(1, FRAMES + (3 if os.environ.get("CW_DEBUG_FRAMES") else 1))],
         "fallback": idle_tree,
     }
 
@@ -215,10 +221,14 @@ def item_definitions():
         by_base.setdefault(base, []).append(weapon)
     out = {}
     for base, ws in by_base.items():
-        out[base] = {"model": {
-            "type": "minecraft:select", "property": "minecraft:custom_model_data", "index": 0,
-            "cases": [{"when": f"cw:{w}", "model": animated(w, weapon_tree(w))} for w in ws],
-            "fallback": VANILLA[base]}}
+        out[base] = {
+            # The animation swaps the model ten times in half a second; without this the
+            # client would play its "new item" lower-and-raise on every frame.
+            "hand_animation_on_swap": False,
+            "model": {
+                "type": "minecraft:select", "property": "minecraft:custom_model_data", "index": 0,
+                "cases": [{"when": f"cw:{w}", "model": animated(w, weapon_tree(w))} for w in ws],
+                "fallback": VANILLA[base]}}
     return out
 
 
@@ -243,9 +253,11 @@ def write_pack():
         counts[variant] = n
         with open(os.path.join(models_dir, variant + ".json"), "w") as f:
             json.dump(model, f, separators=(",", ":"))
-    displays = {w: d for w, v, _, d in weapons.VARIANTS if w == v}
-    for weapon, display in displays.items():
-        for name, model in frame_models(weapon, display).items():
+    idle = {w: (b, d) for w, v, b, d in weapons.VARIANTS if w == v}
+    frames = {}
+    for weapon, (builder, display) in idle.items():
+        frames[weapon] = frame_models(weapon, builder, display)
+        for name, model in frames[weapon].items():
             with open(os.path.join(models_dir, name + ".json"), "w") as f:
                 json.dump(model, f, separators=(",", ":"))
     textures = weapons.textures(NS)
@@ -261,7 +273,7 @@ def write_pack():
             for name in files:
                 path = os.path.join(folder, name)
                 z.write(path, os.path.relpath(path, PACK))
-    return models, textures, counts
+    return models, textures, counts, frames
 
 
 # ---------------------------------------------------------------------- preview
@@ -288,6 +300,10 @@ HTML = r"""<!doctype html>
 Bow and crossbow have a dropdown for their draw stages. <b>Attack</b> plays the weapon's attack animation
 (the motion the pack adds on top of the hand pose for half a second after an ability fires).</p>
 <div class="grid" id="grid"></div>
+<h1>World effects</h1>
+<p class="hint">What every player sees in the world when an ability lands, pack or not: these are real blocks
+placed and moved by the server around the target (the grey figure). Drag to look around; the effect loops.</p>
+<div class="grid" id="fxgrid"></div>
 <script>
 const DATA = __DATA__;
 const NAMES = __NAMES__;
@@ -303,7 +319,7 @@ function loadTexture(dataUri){
 // Minecraft element -> three.js mesh. UVs are 0..16 over the whole texture.
 function buildModel(model, texture){
   const group = new THREE.Group();
-  const mat = new THREE.MeshLambertMaterial({map: texture, side: THREE.DoubleSide});
+  const mat = new THREE.MeshLambertMaterial({map: texture, side: THREE.DoubleSide, transparent: true, alphaTest: 0.05});
   for (const el of model.elements){
     const [x0,y0,z0] = el.from, [x1,y1,z1] = el.to;
     const geo = new THREE.BoxGeometry(x1-x0, y1-y0, z1-z0);
@@ -362,6 +378,105 @@ function makeScene(canvas, model, texture, ortho){
   return {renderer, scene, camera, holder, set, resize};
 }
 
+// ------------------------------------------------------------- world effects
+const BLOCK_COLOUR = {
+  'minecraft:ice': [0x9fd6ff, 0.55], 'minecraft:packed_ice': [0x8ec8f5, 1], 'minecraft:blue_ice': [0x74b8f0, 1],
+  'minecraft:red_stained_glass': [0xd01c22, 0.6], 'minecraft:redstone_block': [0xb01010, 1],
+  'minecraft:white_stained_glass': [0xffffff, 0.5], 'minecraft:light_blue_stained_glass': [0x8ad0ff, 0.6],
+  'minecraft:blue_stained_glass': [0x4d78d8, 0.6], 'minecraft:crying_obsidian': [0x6a2aa8, 1],
+  'minecraft:stone': [0x8d8d8d, 1], 'minecraft:cobbled_deepslate': [0x4c4c50, 1], 'minecraft:gilded_blackstone': [0xd8b04a, 1],
+  'minecraft:end_rod': [0xf4f4ff, 1], 'minecraft:fire': [0xff8a1e, 0.85], 'minecraft:magma_block': [0xd9581c, 1],
+  'minecraft:blackstone': [0x2a2a2e, 1], 'minecraft:sea_lantern': [0xc8f0e8, 1],
+};
+const FX_NAMES = {frost_hit: 'Frostbrand hit', frost_shatter: 'Frostbrand shatter (frozen solid)', blood_slash: 'Bloodletter cut',
+  wind_dash: 'Gale Edge dash', wind_hit: 'Gale Edge momentum strike', slam_wave: 'Aegis Hammer ground slam',
+  tide_splash: 'Tidecaller wet hit / harpoon', storm_cage: 'Stormpiercer shock', hell_burst: 'Hellfire blast'};
+
+function dummy(){
+  const g = new THREE.Group();
+  const skin = new THREE.MeshLambertMaterial({color: 0x777a85});
+  const add = (w,h,d,x,y,z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), skin); m.position.set(x,y,z); g.add(m); };
+  add(0.25,0.75,0.25,-0.13,0.375,0); add(0.25,0.75,0.25,0.13,0.375,0);   // legs
+  add(0.5,0.75,0.25,0,1.125,0);                                           // torso
+  add(0.25,0.75,0.25,-0.375,1.125,0); add(0.25,0.75,0.25,0.375,1.125,0); // arms
+  add(0.5,0.5,0.5,0,1.75,0);                                              // head
+  return g;
+}
+function fxKeyAt(part, t){
+  const keys = part.keys;
+  if (t < keys[0].t) return null;
+  let a = keys[keys.length-1], b = a;
+  for (let i = 0; i+1 < keys.length; i++) if (t >= keys[i].t && t <= keys[i+1].t){ a = keys[i]; b = keys[i+1]; break; }
+  let u = (b.t === a.t) ? 0 : (t - a.t)/(b.t - a.t);
+  u = Math.max(0, Math.min(1, u));
+  if (part.ease === 'out') u = 1-(1-u)*(1-u); else if (part.ease !== 'linear') u = u*u*(3-2*u);
+  const L = (x,y)=>x+(y-x)*u;
+  return {c: a.c.map((v,k)=>L(v,b.c[k])), s: a.s.map((v,k)=>L(v,b.s[k])), r: a.r.map((v,k)=>L(v,b.r[k]))};
+}
+// Browsers allow only a handful of WebGL contexts per page, so every effect card shares one
+// off-screen renderer and gets its picture copied into a plain 2D canvas each frame.
+const fxGl = document.createElement('canvas');
+const fxRenderer = new THREE.WebGLRenderer({canvas: fxGl, antialias: true, alpha: true});
+fxRenderer.setPixelRatio(1);
+const fxCards = [];
+for (const [name, fx] of Object.entries(DATA.fx)){
+  const card = document.createElement('div'); card.className='card';
+  const title = document.createElement('h2'); title.textContent = FX_NAMES[name] || name; card.appendChild(title);
+  const canvas = document.createElement('canvas'); card.appendChild(canvas);
+  const meta = document.createElement('div'); meta.className='meta'; meta.textContent = fx.parts.length + ' blocks, ' + (fx.ticks/20).toFixed(1) + ' s'; card.appendChild(meta);
+  document.getElementById('fxgrid').appendChild(card);
+  const scene = new THREE.Scene();
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const key = new THREE.DirectionalLight(0xffffff, 0.7); key.position.set(3, 8, 5); scene.add(key);
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+  const world = new THREE.Group(); scene.add(world);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(12,12), new THREE.MeshLambertMaterial({color: 0x3b3f4a}));
+  floor.rotation.x = -Math.PI/2; world.add(floor);
+  const grid = new THREE.GridHelper(12, 12, 0x555a66, 0x4a4e58); grid.position.y = 0.002; world.add(grid);
+  world.add(dummy());
+  const cubes = fx.parts.map(p => {
+    const [col, op] = BLOCK_COLOUR[p.block] || [0xff00ff, 1];
+    const m = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshLambertMaterial({color: col, transparent: op < 1, opacity: op}));
+    m.visible = false; world.add(m); return m;
+  });
+  const st = {drag:null, rx:0.5, ry:0.6, dist:7.5, start:performance.now()};
+  canvas.onpointerdown = e => { st.drag=[e.clientX,e.clientY]; canvas.setPointerCapture(e.pointerId); };
+  canvas.onpointerup = () => st.drag=null;
+  canvas.onpointermove = e => { if(!st.drag) return; st.ry += (e.clientX-st.drag[0])*0.01; st.rx = Math.max(0.05, Math.min(1.4, st.rx + (e.clientY-st.drag[1])*0.01)); st.drag=[e.clientX,e.clientY]; };
+  canvas.onwheel = e => { e.preventDefault(); st.dist = Math.min(20, Math.max(3, st.dist + e.deltaY*0.01)); };
+  fxCards.push({fx, canvas, scene, camera, cubes, st});
+}
+function fxFrame(){
+  for (const c of fxCards){
+    const w = c.canvas.clientWidth, h = c.canvas.clientHeight;
+    if (!w || !h) continue;
+    if (c.canvas.width !== w || c.canvas.height !== h){ c.canvas.width = w; c.canvas.height = h; }
+    fxRenderer.setSize(w, h, false);
+    c.camera.aspect = w/h; c.camera.updateProjectionMatrix();
+    const loop = c.fx.ticks + 20;
+    const frozen = (location.hash.match(/t=(\d+)/) || [])[1];
+    const t = frozen !== undefined ? Math.min(+frozen, c.fx.ticks) : ((performance.now()-c.st.start)/50) % loop;
+    c.fx.parts.forEach((p, i) => {
+      const k = t <= c.fx.ticks ? fxKeyAt(p, t) : null;
+      const m = c.cubes[i];
+      if (!k){ m.visible=false; return; }
+      m.visible = true;
+      m.position.set(k.c[0], k.c[1], k.c[2]);
+      m.scale.set(Math.max(k.s[0],0.001), Math.max(k.s[1],0.001), Math.max(k.s[2],0.001));
+      m.rotation.set(THREE.MathUtils.degToRad(k.r[0]), THREE.MathUtils.degToRad(k.r[1]), THREE.MathUtils.degToRad(k.r[2]), 'XYZ');
+    });
+    const s = c.st;
+    c.camera.position.set(Math.sin(s.ry)*Math.cos(s.rx)*s.dist, Math.sin(s.rx)*s.dist + 1, Math.cos(s.ry)*Math.cos(s.rx)*s.dist);
+    c.camera.lookAt(0, 1, 0);
+    fxRenderer.render(c.scene, c.camera);
+    const ctx = c.canvas.getContext('2d');
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(fxGl, 0, 0, w, h, 0, 0, w, h);
+  }
+  requestAnimationFrame(fxFrame);
+}
+fxFrame();
+
 for (const g of GROUPS){
   const card = document.createElement('div'); card.className='card';
   const title = document.createElement('h2'); title.textContent = NAMES[g.weapon]; card.appendChild(title);
@@ -384,8 +499,11 @@ for (const g of GROUPS){
   const img = new Image(); img.onload = () => tex.getContext('2d').drawImage(img,0,0); img.src = DATA.textures[g.weapon];
 
   const view = makeScene(canvas, DATA.models[g.variants[0]], texture, false);
+  // One pre-built mesh per animation frame, swapped in while the attack plays.
+  const frameMeshes = DATA.frames[g.weapon].map(mdl => { const grp = buildModel(mdl, texture); grp.visible = false; view.holder.add(grp); return grp; });
+  let idleGroup = null;
   const slot = makeScene(gui, DATA.models[g.variants[0]], texture, true);
-  const show = (v) => { view.set(DATA.models[v]); slot.set(DATA.models[v]); meta.textContent = DATA.counts[v] + ' elements'; };
+  const show = (v) => { view.set(DATA.models[v]); idleGroup = view.holder.children[view.holder.children.length-1]; slot.set(DATA.models[v]); meta.textContent = DATA.counts[v] + ' elements'; };
   show(g.variants[0]);
   if (select) select.onchange = () => show(select.value);
 
@@ -404,6 +522,7 @@ for (const g of GROUPS){
     view.resize(); slot.resize();
     if (auto) ry += 0.008;
     let d = {rot:[0,0,0], pos:[0,0,0], scale:1};
+    let activeFrame = -1;
     if (animStart >= 0){
       const elapsed = (performance.now() - animStart) / 1000;
       const cycle = elapsed % 1.2;              // 0.5 s of motion, then a rest
@@ -412,13 +531,15 @@ for (const g of GROUPS){
         const f = cycle / 0.5 * (anim.frames.length - 1);
         const i = Math.floor(f), u = f - i, a = anim.frames[i], b = anim.frames[Math.min(i+1, anim.frames.length-1)];
         d = {rot: a.rot.map((v,k)=>v+(b.rot[k]-v)*u), pos: a.pos.map((v,k)=>v+(b.pos[k]-v)*u), scale: a.scale+(b.scale-a.scale)*u};
+        activeFrame = Math.min(frameMeshes.length-1, Math.max(0, Math.round(f) - 1));
       }
     }
+    frameMeshes.forEach((grp, k) => grp.visible = (k === activeFrame));
+    if (idleGroup) idleGroup.visible = (activeFrame < 0);
     const r = THREE.MathUtils.degToRad;
     view.holder.rotation.set(rx, ry, 0);
     view.holder.position.set(0,0,0); view.holder.scale.set(1,1,1);
-    if (view.holder.children[0]){
-      const c = view.holder.children[0];
+    for (const c of view.holder.children){
       c.rotation.set(r(d.rot[0]), r(d.rot[1]), r(d.rot[2]), 'XYZ');
       c.position.set(d.pos[0], d.pos[1], d.pos[2]);
       c.scale.set(d.scale, d.scale, d.scale);
@@ -435,7 +556,7 @@ for (const g of GROUPS){
 """
 
 
-def write_preview(models, textures, counts):
+def write_preview(models, textures, counts, frames):
     tex_data = {}
     for weapon, img in textures.items():
         buf = io.BytesIO()
@@ -448,12 +569,16 @@ def write_preview(models, textures, counts):
     anims = {}
     for weapon, display in displays.items():
         keys = ANIMS[WEAPON_ANIM[weapon]]
-        frames = []
+        poses = []
         for frame in range(0, FRAMES + 1):
             rot, pos, scale = keyframe_at(keys, frame / FRAMES)
-            frames.append({"rot": rot, "pos": pos, "scale": scale})
-        anims[weapon] = {"name": WEAPON_ANIM[weapon], "frames": frames}
-    html = (HTML.replace("__DATA__", json.dumps({"models": models, "textures": tex_data, "counts": counts, "anims": anims}))
+            poses.append({"rot": rot, "pos": pos, "scale": scale})
+        anims[weapon] = {"name": WEAPON_ANIM[weapon], "frames": poses}
+    import effects as fxmod
+    fx = fxmod.build()
+    frame_models_by_weapon = {w: [fm[f"{w}_f{k}"] for k in range(1, FRAMES + 1)] for w, fm in frames.items()}
+    html = (HTML.replace("__DATA__", json.dumps({"models": models, "textures": tex_data, "counts": counts,
+                                                 "anims": anims, "frames": frame_models_by_weapon, "fx": fx}))
             .replace("__NAMES__", json.dumps(DISPLAY_NAME))
             .replace("__GROUPS__", json.dumps(groups)))
     with open(PREVIEW, "w") as f:
@@ -461,8 +586,10 @@ def write_preview(models, textures, counts):
 
 
 def main():
-    models, textures, counts = write_pack()
-    write_preview(models, textures, counts)
+    import effects as fxmod
+    fxmod.main()
+    models, textures, counts, frames = write_pack()
+    write_preview(models, textures, counts, frames)
     for variant, n in counts.items():
         print(f"{variant:28s} {n:4d} elements")
     print(f"pack:    {PACK}")

@@ -128,6 +128,7 @@ public final class GaleEdge extends CustomWeapon {
         CustomWeapons.animations().play(player, this, config);
 
         if (player.level() instanceof ServerLevel level) {
+            CustomWeapons.effects().play(level, "wind_dash", player.position(), null);
             level.playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.BREEZE_WIND_CHARGE_BURST, SoundSource.PLAYERS, 1.0f, 1.2f);
             level.sendParticles(ParticleTypes.GUST, player.getX(), player.getY(), player.getZ(),
@@ -154,6 +155,7 @@ public final class GaleEdge extends CustomWeapon {
         Hurt.deal(victim, victim.damageSources().indirectMagic(attacker, attacker),
                 (float) config.momentum_bonus_damage);
         if (attacker.level() instanceof ServerLevel level) {
+            CustomWeapons.effects().play(level, "wind_hit", victim);
             level.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
                     SoundEvents.PLAYER_ATTACK_KNOCKBACK, SoundSource.PLAYERS, 1.0f, 1.4f);
         }

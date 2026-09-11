@@ -13,3 +13,10 @@ runtest/console.fifo
 pack/ref/
 pack/customweapons-models/
 __pycache__/
+shotrig/server/
+shotrig/run/
+shotrig/build/
+shotrig/.gradle/
+shotrig/shots/
+shotrig/shots_*/
+shotrig/*.log

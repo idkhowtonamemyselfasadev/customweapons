@@ -1,0 +1,41 @@
+plugins {
+    id 'fabric-loom' version "${loom_version}"
+    id 'java'
+}
+version = project.mod_version
+group = project.maven_group
+base { archivesName = project.archives_base_name }
+repositories { mavenCentral() }
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+}
+processResources {
+    def props = [version: project.version, minecraft_version: project.minecraft_version, loader_version: project.loader_version]
+    inputs.properties props
+    filesMatching('fabric.mod.json') { expand props }
+}
+tasks.withType(JavaCompile).configureEach { it.options.encoding = 'UTF-8'; it.options.release = 21 }
+java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
+// Screenshot rig launch: gradle runClient -Pscript=<file> -Pserver=host:port
+loom {
+    runs {
+        client {
+            programArgs "--username", "ShotRig", "--width", "1920", "--height", "1080"
+            // Passed through the environment: a -P property named "script" resolves to
+            // something else inside a Gradle build script.
+            def rig = providers.gradleProperty('cwrig').getOrNull()   // "script|host:port|display|wayland"
+            if (rig) {
+                def parts = rig.split('\\|')
+                vmArgs "-Dcw.script=" + parts[0], "-Dcw.server=" + parts[1]
+                // Pinned here rather than inherited: the Gradle daemon keeps the environment it
+                // was first started with, which once put the rig on the real desktop.
+                environmentVariable "DISPLAY", parts[2]
+                environmentVariable "WAYLAND_DISPLAY", parts[3]
+                environmentVariable "SDL_VIDEODRIVER", "x11"
+            }
+        }
+    }
+}
