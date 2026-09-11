@@ -178,10 +178,18 @@ public final class WeaponsConfig {
     /** With pack_required off: ask each player in chat, on join, whether they want the models. */
     public boolean pack_offer_on_join = true;
     /** A direct download link to the pack zip. A GitHub release asset works. */
-    public String pack_url = "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.1.0/CustomWeapons-Models.zip";
+    public String pack_url = "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.2.0/CustomWeapons-Models.zip";
     /** SHA-1 of that zip. Change it with the file, or clients keep a stale cached copy. */
-    public String pack_sha1 = "d8eef744ca449c55bd9aea289ce8c2ed2cc9a600";
+    public String pack_sha1 = "0cf8646982e687ce2813ddd38a8b59b6426f0c1a";
     public String pack_offer_message = "This server has 3D models for the legendary weapons. Want them?";
+
+    // --------------------------------------------------------------- world effects
+    /**
+     * The 3D effects in the world: the ice closing around a frozen target, the slam's
+     * debris, the lightning cage, the ember burst. Built from block-display entities, so
+     * every player sees them, pack or not. Off, only the vanilla particles remain.
+     */
+    public boolean world_effects = true;
 
     // ------------------------------------------------------------------ animations
     /**

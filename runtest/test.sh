@@ -79,6 +79,7 @@ cat > config/customweapons.json <<'JSON'
   "altars_enabled": false,
   "altar_spacing_chunks": 6,
   "stat_sweep_interval_ticks": 5,
+  "world_effects": true,
   "log_abilities": true
 }
 JSON
@@ -163,6 +164,14 @@ assert_log "the one-legendary rule dropped the second weapon, keeping the first"
            "LIMIT Smith dropped gale_edge \(carrying frostbrand\)"            -ge 1
 assert_log "the altar forged a weapon"              "ALTAR forge .* weapon=bloodletter" -ge 1
 assert_log "altars generate in newly generated chunks" "Weapon altar placed"           -ge 1
+# World effects: the keyframes in effects.json parse into the records at boot, and the
+# block displays they play never raise from the tick loop or the display mixins.
+assert_log "all nine world effects loaded from effects.json" "Loaded 9 world effects"      -ge 1
+assert_log "effects.json was readable"              "Could not read effects.json"     -eq 0
+assert_log "no exception out of the effects player or its display mixins" \
+           "dev\.customweapons\.(Effects|mixin\.(Block)?DisplayInvoker)"            -eq 0
+assert_log "no leftover effect entities had to be swept on a fresh world" \
+           "Removed [0-9]+ leftover effect entities"                          -eq 0
 
 echo
 echo "--- bleed budget: the sum of one bleed's ticks must not exceed 12.0 ---"

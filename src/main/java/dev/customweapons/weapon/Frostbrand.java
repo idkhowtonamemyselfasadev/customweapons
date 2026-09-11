@@ -106,6 +106,7 @@ public final class Frostbrand extends CustomWeapon {
         if (frozen < required) {
             victim.setTicksFrozen(frozen);
             if (victim.level() instanceof ServerLevel level) {
+                CustomWeapons.effects().play(level, "frost_hit", victim);
                 level.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
                         SoundEvents.POWDER_SNOW_HIT, SoundSource.PLAYERS, 1.0f, 0.8f);
                 level.sendParticles(ParticleTypes.SNOWFLAKE,
@@ -130,6 +131,17 @@ public final class Frostbrand extends CustomWeapon {
         victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS,
                 config.shatter_slowness_ticks, config.shatter_slowness_amplifier));
         if (victim.level() instanceof ServerLevel level) {
+            // The ice closes around them for as long as they are rooted, then bursts.
+            CustomWeapons.effects().play(level, "frost_shatter", victim);
+            CustomWeapons.effects().later(41, () -> {
+                if (!victim.isRemoved()) {
+                    level.sendParticles(new net.minecraft.core.particles.BlockParticleOption(
+                                    ParticleTypes.BLOCK, net.minecraft.world.level.block.Blocks.ICE.defaultBlockState()),
+                            victim.getX(), victim.getY() + 1.0, victim.getZ(), 80, 0.5, 0.9, 0.5, 0.2);
+                    level.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
+                            SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 1.0f, 0.9f);
+                }
+            });
             level.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
                     SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 1.0f, 0.7f);
             level.playSound(null, victim.getX(), victim.getY(), victim.getZ(),

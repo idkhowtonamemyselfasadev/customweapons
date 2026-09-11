@@ -117,11 +117,13 @@ def texture(palette, seed):
     px = img.load()
     for i, (role, base) in enumerate(palette.items()):
         ox, oy = (i % 4) * SWATCH, (i // 4) * SWATCH
-        tones = [tuple(int(c * f) for c in base) for f in (0.9, 0.96, 1.0, 1.0, 1.05)]
+        alpha = base[3] if len(base) == 4 else 255
+        rgb = base[:3]
+        tones = [tuple(int(c * f) for c in rgb) for f in (0.9, 0.96, 1.0, 1.0, 1.05)]
         for y in range(SWATCH):
             for x in range(SWATCH):
                 t = rng.choice(tones)
-                px[ox + x, oy + y] = tuple(min(255, c) for c in t) + (255,)
+                px[ox + x, oy + y] = tuple(min(255, c) for c in t) + (alpha,)
     return img
 
 
@@ -326,6 +328,121 @@ PALETTES = {
                  "limb": (232, 172, 44), "limbdark": (172, 112, 22), "flame": (255, 150, 22), "string": (202, 202, 202),
                  "star": (250, 250, 232), "bolt": (44, 32, 32)},
 }
+
+# Translucent roles for the attack-frame effects: trails, arcs, flashes.
+FX_ROLES = {
+    "bloodletter": {"trail": (210, 24, 34, 150), "trail2": (255, 90, 90, 90)},
+    "gale_edge": {"trail": (200, 255, 255, 140), "trail2": (255, 255, 255, 90)},
+    "frostbrand": {"trail": (180, 230, 255, 150), "trail2": (240, 250, 255, 110)},
+    "aegis_hammer": {"trail": (255, 210, 90, 170), "burst": (170, 80, 240, 160)},
+    "tidecaller": {"trail": (120, 200, 230, 150), "trail2": (200, 240, 255, 100)},
+    "stormpiercer": {"arc": (220, 240, 255, 230), "arc2": (120, 170, 255, 190)},
+    "hellfire": {"flash": (255, 210, 70, 210), "flash2": (255, 110, 20, 160)},
+}
+for _w, _roles in FX_ROLES.items():
+    PALETTES[_w].update(_roles)
+
+
+def _fan(v, pivot, length, angles, role, shorten=1.0):
+    """Motion-blur fan: the blade's silhouette swept through each angle (degrees from +y)."""
+    px, py = pivot
+    for a in angles:
+        rad = math.radians(a)
+        for t in range(2, int(length * shorten)):
+            x = int(round(px + math.sin(rad) * t))
+            y = int(round(py + math.cos(rad) * t))
+            v.box(x, y, x, y, role, 16, 16)
+
+
+def fx_slash(v, frame):
+    # A fan of afterimages opening to the swing side over the cut, then thinning out.
+    plan = {3: ([12], 1.0), 4: ([12, 26], 1.0), 5: ([12, 26, 40], 1.0), 6: ([14, 28, 42, 56], 1.0),
+            7: ([30, 44, 58], 0.85), 8: ([46, 60], 0.65), 9: ([62], 0.45)}
+    if frame in plan:
+        angles, shorten = plan[frame]
+        _fan(v, (16, 11), 20, angles, "trail", shorten)
+        _fan(v, (16, 11), 20, [a - 6 for a in angles], "trail2", shorten * 0.8)
+
+
+def fx_thrust(v, frame):
+    # Speed lines along the blade as it lunges, and a small burst at the tip.
+    if 4 <= frame <= 7:
+        n = {4: 22, 5: 26, 6: 20, 7: 12}[frame]
+        for dx, role in ((-5, "trail"), (5, "trail"), (-8, "trail2"), (8, "trail2")):
+            y0 = 31 - n
+            v.box(16 + dx, y0, 16 + dx, 30, role, 16, 16)
+    if 5 <= frame <= 6:
+        r = 2 if frame == 5 else 4
+        for a in range(0, 360, 45):
+            x = int(round(16 + math.cos(math.radians(a)) * r))
+            y = int(round(31 + math.sin(math.radians(a)) * r * 0.5))
+            v.box(x, min(31, y), x, min(31, y), "trail2", 16, 16)
+
+
+def fx_slam(v, frame):
+    # A halo above the raised head, then a burst of sparks out of the impact.
+    if 2 <= frame <= 4:
+        for a in range(0, 360, 30):
+            x = int(round(16 + math.cos(math.radians(a)) * 9))
+            y = int(round(26 + math.sin(math.radians(a)) * 5))
+            if 0 <= x < 32 and 0 <= y < 32:
+                v.box(x, y, x, y, "trail", 16, 16)
+    if 5 <= frame <= 8:
+        r = {5: 3, 6: 6, 7: 9, 8: 12}[frame]
+        for a in range(0, 360, 30):
+            x = int(round(16 + math.cos(math.radians(a)) * r))
+            y = int(round(26 + math.sin(math.radians(a)) * r))
+            if 0 <= x < 32 and 0 <= y < 32:
+                v.box(x, y, x, y, "burst" if a % 60 == 0 else "trail", 15, 17)
+
+
+def fx_shot(v, frame):
+    # Lightning crawling up the string, brightest at the tips, gone by mid-animation.
+    if frame <= 5:
+        rng = random.Random("shot-%d" % frame)
+        x = 17
+        for y in range(2, 30):
+            if rng.random() < 0.55:
+                x = max(14, min(24, x + rng.choice((-2, -1, 1, 2))))
+            v.box(x, y, x, y, "arc" if rng.random() < 0.6 else "arc2", 16, 16)
+        r = {1: 1, 2: 2, 3: 3, 4: 2, 5: 1}[frame]
+        for ty in (1, 30):
+            for dx in range(-r, r + 1):
+                for dy in range(-r, r + 1):
+                    if abs(dx) + abs(dy) <= r:
+                        v.box(16 + dx, min(31, max(0, ty + dy)), 16 + dx, min(31, max(0, ty + dy)), "arc2", 15, 17)
+
+
+def fx_blast(v, frame):
+    # Muzzle flash off the front of the stock: a cross of flame that flares and dies.
+    if frame <= 4:
+        r = {1: 2, 2: 5, 3: 4, 4: 2}[frame]
+        role = "flash" if frame <= 2 else "flash2"
+        for d in range(1, r + 1):
+            for dx, dy in ((d, 0), (-d, 0), (0, d), (0, -d), (d, d), (-d, d), (d, -d), (-d, -d)):
+                if abs(dx) == abs(dy) and d > r * 0.7:
+                    continue
+                x, y = 16 + dx, min(31, 31 + dy)
+                if 0 <= x < 32 and 0 <= y < 32:
+                    v.box(x, y, x, y, role, 15, 17)
+
+
+WEAPON_FX = {
+    "bloodletter": fx_slash, "frostbrand": fx_slash, "gale_edge": fx_thrust, "tidecaller": fx_thrust,
+    "aegis_hammer": fx_slam, "stormpiercer": fx_shot, "hellfire": fx_blast,
+}
+
+
+def build_frame(weapon, builder, display, frame, namespace="customweapons"):
+    """The weapon plus its attack-frame effect geometry, for one animation frame."""
+    v = Volume()
+    builder(v)
+    import os
+    if not os.environ.get("CW_NOFX"):
+        WEAPON_FX[weapon](v, frame)
+    boxes = mesh(v)
+    return model_json(boxes, PALETTES[weapon], f"{namespace}:item/{weapon}", display), len(boxes)
+
 
 # Every model variant: (weapon id, variant name, builder, display block)
 VARIANTS = [

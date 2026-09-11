@@ -89,6 +89,9 @@ public final class ShockManager {
         if (config.shock_lightning) {
             strike(level, victim, shooter, config);
         }
+        if (victim.isAlive()) {
+            CustomWeapons.effects().play(level, "storm_cage", victim);
+        }
 
         level.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
                 SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 0.4f, 1.6f);

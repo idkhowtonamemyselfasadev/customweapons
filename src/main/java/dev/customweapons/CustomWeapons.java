@@ -56,6 +56,7 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
     private static final Claims CLAIMS = new Claims();
     private static final PackOffer PACK = new PackOffer();
     private static final Animations ANIMATIONS = new Animations();
+    private static final Effects EFFECTS = new Effects();
 
     /**
      * Bumped on every config load. Items carry the generation they were stamped at, so a
@@ -88,6 +89,10 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
         return SHOCK;
     }
 
+    public static Effects effects() {
+        return EFFECTS;
+    }
+
     public static Animations animations() {
         return ANIMATIONS;
     }
@@ -107,15 +112,18 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
     @Override
     public void onInitializeServer() {
         reloadConfig();
+        EFFECTS.load();
 
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             ALTARS.load(server);
             CLAIMS.load(server);
             PACK.load(server);
+            EFFECTS.sweepStale(server);
             LOGGER.info("CustomWeapons ready: {} weapons craftable, {} altars known",
                     Weapons.ALL.stream().filter(w -> w.enabled(config)).count(), ALTARS.count());
         });
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            EFFECTS.clear();
             ALTARS.save();
             CLAIMS.save();
         });
@@ -183,6 +191,7 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
         SHOCK.onTick();
         PROJECTILES.onTick(server, config);
         ANIMATIONS.onTick(server);
+        EFFECTS.onTick(server);
         ALTARS.onTick(server, config);
         int interval = Math.max(1, config.stat_sweep_interval_ticks);
         if (++sweepTick % interval == 0) {

@@ -5,6 +5,10 @@
 // abilities, then so can a real player on an unmodified client.
 const mineflayer = require('/home/tim/claude/anticheat/test/node_modules/mineflayer');
 const fs = require('fs');
+// The mod's world effects are vanilla block_display entities; a client only ever sees the
+// numeric type id in spawn_entity.
+const BLOCK_DISPLAY = require('/home/tim/claude/anticheat/test/node_modules/minecraft-data')('1.21.11')
+    .entitiesByName.block_display.id;
 
 const RUN = __dirname;
 const PORT = parseInt(process.env.PORT || '25603', 10);
@@ -46,6 +50,20 @@ function connect(username) {
     // Velocity packets are what a vanilla client actually applies for a dash or knockback.
     bot._client.on('entity_velocity', (p) => {
       if (bot.entity && p.entityId === bot.entity.id) bot.velocityPackets.push(p);
+    });
+    // World effects: block displays spawned by the handful, teleported every tick, then
+    // removed. Count what this client is sent, by entity type id; the per-tick moves are
+    // deliberately not recorded, only that the bot survives them.
+    bot.fxSpawns = [];   // {t, id}
+    bot.fxGone = [];     // {t, id}
+    bot._client.on('spawn_entity', (p) => {
+      if (p.type === BLOCK_DISPLAY) bot.fxSpawns.push({ t: Date.now(), id: p.entityId });
+    });
+    bot._client.on('entity_destroy', (p) => {
+      const now = Date.now();
+      for (const id of p.entityIds) {
+        if (bot.fxSpawns.some((s) => s.id === id)) bot.fxGone.push({ t: now, id });
+      }
     });
     bot.once('spawn', () => resolve(bot));
     bot.on('error', reject);
@@ -116,6 +134,45 @@ function watchFrames(bot, selector) {
     raw, parsed,
     stop() { stream.removeListener('data', onRaw); clearInterval(poll); },
   };
+}
+
+// ------------------------------------------------------------------- world effects
+
+/**
+ * The block displays a client was sent from `since` on, within `spawnWindowMs`, and how
+ * many of those it has since been told to remove within `goneWindowMs` of their spawn.
+ */
+function fxSince(bot, since, spawnWindowMs = 1000, goneWindowMs = 1500) {
+  const spawned = bot.fxSpawns.filter((s) => s.t >= since && s.t <= since + spawnWindowMs);
+  const goneAt = new Map(bot.fxGone.map((g) => [g.id, g.t]));
+  const gone = spawned.filter((s) => goneAt.has(s.id) && goneAt.get(s.id) <= s.t + goneWindowMs).length;
+  return { spawned: spawned.length, gone, total: bot.fxSpawns.filter((s) => s.t >= since).length };
+}
+
+/**
+ * Asks the server itself, through the console, how many tagged effect displays exist right
+ * now. `execute if entity` echoes "Test passed. Count: N" or "Test failed" into test.log.
+ * NaN when nothing was echoed in time.
+ */
+async function fxCount(extraSelector = '', selectorBase = 'type=minecraft:block_display,tag=customweapons_fx') {
+  const offset = fs.readFileSync(RUN + '/test.log', 'utf8').length;
+  cmd(`execute if entity @e[${selectorBase}${extraSelector}]`);
+  for (let i = 0; i < 20; i++) {
+    await sleep(100);
+    const tail = fs.readFileSync(RUN + '/test.log', 'utf8').slice(offset);
+    const m = tail.match(/Test passed[.,]? [Cc]ount: (\d+)|Test passed|Test failed/);
+    if (m) return m[0] === 'Test failed' ? 0 : parseInt(m[1] || '1', 10);
+  }
+  return NaN;
+}
+
+async function waitUntil(pred, limitMs, stepMs = 50) {
+  const started = Date.now();
+  while (Date.now() - started < limitMs) {
+    if (pred()) return true;
+    await sleep(stepMs);
+  }
+  return pred();
 }
 
 // ---------------------------------------------------------------------------- crafting
@@ -248,6 +305,7 @@ async function main() {
     // Each hit also plays the attack animation on the held sword: frames 1..10, one a
     // tick, then the float is cleared. Watch the held slot while the swings go in.
     const anim = watchFrames(smith, 'cw:bloodletter');
+    const bloodFxAt = Date.now();
     for (let i = 0; i < 3; i++) {
       smith.attack(target);
       await sleep(600);
@@ -266,6 +324,14 @@ async function main() {
     check(smith.actionBars.some((m) => /Bleed x/.test(m)),
         'attacker sees the bleed stacks on the action bar',
         smith.actionBars.filter((m) => /Bleed/.test(m)).slice(-1)[0] || '');
+
+    // The blood_slash world effect: 9 block displays per hit, gone again after 12 ticks.
+    const bloodFx = fxSince(dummy, bloodFxAt, 1000, 1500);
+    console.log(`   blood_slash: Dummy was sent ${bloodFx.spawned} block displays within 1s of the first swing `
+        + `(${bloodFx.total} over the section), ${bloodFx.gone} of them removed within 1.5s`);
+    check(bloodFx.spawned >= 9, 'a Bloodletter hit spawns the blood_slash displays (>= 9)', `${bloodFx.spawned}`);
+    check(bloodFx.gone >= 9 && bloodFx.gone >= bloodFx.spawned,
+        'every blood_slash display is removed again within 1.5s', `${bloodFx.gone}/${bloodFx.spawned}`);
 
     // The animation, as the client received it.
     const trace = anim.raw.map((s) => s.frame);
@@ -349,6 +415,7 @@ async function main() {
 
   const before = smith.entity.position.clone();
   await smith.look(0, 0, true);        // face due south, level
+  const dashFxAt = Date.now();
   smith.activateItem();
   await sleep(500);
   const moved = smith.entity.position.distanceTo(before);
@@ -362,6 +429,10 @@ async function main() {
       launch ? JSON.stringify(launch.velocity) : 'no packet');
   check(smith.actionBars.some((m) => m.trim() === 'Dash'),
       'the dash reports on the action bar');
+  await sleep(600);
+  const dashFx = fxSince(smith, dashFxAt, 1000, 1500);
+  console.log(`   wind_dash: Smith was sent ${dashFx.spawned} block displays, ${dashFx.gone} removed within 1.5s`);
+  check(dashFx.spawned >= 16, 'the dash spawns the wind_dash displays (>= 16)', `${dashFx.spawned}`);
 
   // Back into melee range while the Momentum window is still open.
   cmd('tp Smith 1 -59 0');
@@ -369,8 +440,12 @@ async function main() {
   smith.actionBars.length = 0;
   const momentumTarget = smith.players['Dummy'] && smith.players['Dummy'].entity;
   const dummyBeforeMomentum = dummy.health;
+  const momentumFxAt = Date.now();
   if (momentumTarget) smith.attack(momentumTarget);
   await sleep(1200);
+  const momentumFx = fxSince(dummy, momentumFxAt, 1000, 1500);
+  console.log(`   wind_hit: Dummy was sent ${momentumFx.spawned} block displays, ${momentumFx.gone} removed within 1.5s`);
+  check(momentumFx.spawned >= 7, 'the Momentum Strike spawns the wind_hit displays (>= 7)', `${momentumFx.spawned}`);
   console.log(`   Dummy ${dummyBeforeMomentum} -> ${dummy.health}`);
   check(smith.actionBars.some((m) => /Momentum Strike/.test(m)),
       'the first hit after a dash is a Momentum Strike',
@@ -403,8 +478,12 @@ async function main() {
       'a slam in mid-air does nothing');
 
   const dummyBeforeSlam = dummy.health;
+  const slamFxAt = Date.now();
   smith.activateItem();                // on the ground: must slam
   await sleep(1500);
+  const slamFx = fxSince(smith, slamFxAt, 1000, 1500);
+  console.log(`   slam_wave: Smith was sent ${slamFx.spawned} block displays, ${slamFx.gone} removed within 1.5s`);
+  check(slamFx.spawned >= 31, 'the slam spawns the slam_wave displays (>= 31)', `${slamFx.spawned}`);
   console.log(`   Dummy ${dummyBeforeSlam} -> ${dummy.health}`);
   check(dummy.health < dummyBeforeSlam, 'slam damages a nearby player',
       `${(dummyBeforeSlam - dummy.health).toFixed(1)} hp`);
@@ -468,13 +547,23 @@ async function main() {
         const before = dummy.health;
         archer.activateItem();
         await sleep(1400);
+        const fxAt = Date.now();
         archer.deactivateItem();
         if (arms) fullDraws++;
-        await sleep(2500);
+        // The storm_cage (4 end rods + glass) stands for 25 ticks around the victim, so
+        // the server-side look at its block states has to happen the moment it appears.
+        let endRods = null;
+        if (arms && await waitUntil(() => dummy.fxSpawns.some((s) => s.t >= fxAt), 1500)) {
+          endRods = await fxCount(',nbt={block_state:{Name:"minecraft:end_rod"}}');
+        }
+        await sleep(Math.max(0, 2500 - (Date.now() - fxAt)));
         const drop = before - dummy.health;
+        const fx = fxSince(dummy, fxAt, 1500, 2000);
         console.log(`   Dummy ${before} -> ${dummy.health} (-${drop.toFixed(1)}); Archer bar `
             + JSON.stringify(archer.actionBars));
-        if (drop > 0) return { drop, bars: archer.actionBars.slice() };
+        console.log(`   storm_cage: Dummy was sent ${fx.spawned} block displays, ${fx.gone} removed within 2s; `
+            + `end_rod displays on the server while it stood: ${endRods}`);
+        if (drop > 0) return { drop, bars: archer.actionBars.slice(), fx, endRods };
       }
       return null;
     };
@@ -491,6 +580,9 @@ async function main() {
           `${shocked.drop.toFixed(1)} hp`);
       check(shocked.bars.some((m) => /^Shock/.test(m.trim())),
           'the shooter sees the shock land', shocked.bars.slice(-1)[0] || '');
+      check(shocked.fx.spawned >= 5, 'the shock spawns the storm_cage displays (>= 5)', `${shocked.fx.spawned}`);
+      check(shocked.endRods >= 1, 'the storm_cage has an end_rod display while it stands',
+          `${shocked.endRods} on the server`);
 
       // Straight away again, well inside the 30s cooldown: the arrow still does its 10, the
       // shock does not fire, and the shooter is told how long is left.
@@ -538,9 +630,19 @@ async function main() {
     // A player has 10 ticks of invulnerability after a hit, so swings 350ms apart would
     // mostly be swallowed; 600ms lands every one and thaws only 24 of each hit's 70 ticks.
     const dummyBeforeFrost = dummy.health;
+    const frostFxAt = Date.now();
+    let shatterAt = 0;
+    let iceCubes = null;
     for (let i = 0; i < 5; i++) {
       smith.attack(frostTarget);
-      await sleep(600);
+      const swungAt = Date.now();
+      // The frost_shatter ice cube stands for 45 ticks; look at its block state on the
+      // server the moment the shatter is reported.
+      if (!shatterAt && await waitUntil(() => smith.actionBars.some((m) => /Shatter/.test(m)), 600)) {
+        shatterAt = Date.now();
+        iceCubes = await fxCount(',nbt={block_state:{Name:"minecraft:ice"}}');
+      }
+      await sleep(Math.max(0, 600 - (Date.now() - swungAt)));
     }
     await sleep(1000);
     console.log(`   Dummy ${dummyBeforeFrost} -> ${dummy.health}`);
@@ -552,6 +654,20 @@ async function main() {
         smith.actionBars.filter((m) => /Shatter/.test(m)).slice(-1)[0] || 'no Shatter seen');
     check(dummy.health < dummyBeforeFrost, 'the Frostbrand hurts',
         `${(dummyBeforeFrost - dummy.health).toFixed(1)} hp`);
+
+    // World effects: frost_hit (3) on every hit, frost_shatter (5, one of them an ice cube)
+    // on the shatter, all gone again 45 ticks later.
+    const frostFx = fxSince(dummy, frostFxAt, 1000, 1500);
+    const shatterFx = shatterAt ? fxSince(dummy, shatterAt - 150, 1000, 3000) : { spawned: 0, gone: 0, total: 0 };
+    console.log(`   frost_hit: Dummy was sent ${frostFx.spawned} block displays within 1s of the first swing, `
+        + `${frostFx.gone} removed within 1.5s; frost_shatter: ${shatterFx.spawned} around the shatter; `
+        + `ice-cube displays on the server just after it: ${iceCubes}`);
+    check(frostFx.spawned >= 3, 'a Frostbrand hit spawns the frost_hit displays (>= 3)', `${frostFx.spawned}`);
+    check(shatterFx.spawned >= 5, 'the shatter spawns the frost_shatter displays (>= 5)', `${shatterFx.spawned}`);
+    check(iceCubes >= 1, 'an ice block display stands on the server while the cube is up', `${iceCubes}`);
+    if (shatterAt) await sleep(Math.max(0, shatterAt + 3300 - Date.now()));
+    const frostLeft = await fxCount();
+    check(frostLeft === 0, 'no tagged displays remain 3s after the shatter', `${frostLeft} on the server`);
   }
 
   // ---- Stormpiercer vs a creeper: a fully drawn hit executes it outright.
@@ -631,6 +747,7 @@ async function main() {
     await archer.lookAt(throwAt.position.offset(0, 1.4, 0), true);
     archer.activateItem();             // a trident throws on release after >= 10 ticks of use
     await sleep(700);
+    const throwFxAt = Date.now();
     archer.deactivateItem();
     await sleep(2000);
     const yank = dummy.velocityPackets[dummy.velocityPackets.length - 1];
@@ -638,6 +755,12 @@ async function main() {
     console.log(`   Dummy velocity packets: ${dummy.velocityPackets.length}`
         + (yank ? ' ' + JSON.stringify(yank.velocity) : '') + (bar ? `; action bar "${bar}"` : ''));
     harpooned = !!yank || (!!bar && bar.trim() === 'Harpoon');
+    if (harpooned) {
+      // tide_splash (10) on the victim plus a 12-bead sea_lantern line back to the thrower.
+      const fx = fxSince(dummy, throwFxAt, 1500, 1500);
+      console.log(`   tide_splash + line: Dummy was sent ${fx.spawned} block displays, ${fx.gone} removed within 1.5s`);
+      check(fx.spawned >= 22, 'the harpoon spawns the splash and the bead line (>= 22 displays)', `${fx.spawned}`);
+    }
   }
   check(harpooned, 'a thrown Tidecaller hit yanks the target toward the thrower');
   check(archer.actionBars.some((m) => m.trim() === 'Harpoon'),
@@ -659,6 +782,7 @@ async function main() {
   check(/Hellfire/.test(JSON.stringify(hellfire)), 'the Hellfire reaches the client named');
 
   let blasted = false;
+  let boltFxAt = 0;
   for (let attempt = 1; attempt <= 2 && !blasted; attempt++) {
     console.log(`   bolt, attempt ${attempt}`);
     cmd('tp Dummy 3 -59 -2');
@@ -678,6 +802,7 @@ async function main() {
     await sleep(1500);
     archer.deactivateItem();
     await sleep(400);
+    boltFxAt = Date.now();
     archer.activateItem();
     await sleep(2500);
     console.log(`   Dummy ${dummyBeforeBolt} -> ${dummy.health}; velocity packets ${dummy.velocityPackets.length}; `
@@ -685,6 +810,11 @@ async function main() {
     const armed = archer.actionBars.some((m) => m.trim() === 'Hellfire');
     const felt = dummy.health < dummyBeforeBolt || dummy.velocityPackets.length > 0;
     blasted = armed && felt;
+    if (blasted) {
+      const fx = fxSince(dummy, boltFxAt, 1500, 1500);
+      console.log(`   hell_burst: Dummy was sent ${fx.spawned} block displays, ${fx.gone} removed within 1.5s`);
+      check(fx.spawned >= 17, 'the explosion spawns the hell_burst displays (>= 17)', `${fx.spawned}`);
+    }
     if (!blasted && attempt < 2) {
       await healDummy();
       await sleep(8500 - 1200);        // the next bolt is only armed once the cooldown is over
@@ -692,6 +822,12 @@ async function main() {
   }
   check(archer.actionBars.some((m) => m.trim() === 'Hellfire'), 'the armed bolt reports on the action bar');
   check(blasted, 'the Hellfire bolt hurts the target it was fired at');
+  if (blasted) {
+    // The scorch slab is the longest-lived part, 100 ticks; then nothing may be left.
+    await sleep(Math.max(0, boltFxAt + 6500 - Date.now()));
+    const hellLeft = await fxCount();
+    check(hellLeft === 0, 'no tagged displays remain 6.5s after the explosion', `${hellLeft} on the server`);
+  }
 
   // Leave the arena clean for the SMP rules: no stray weapons, no lingering effects.
   cmd('kill @e[type=minecraft:arrow]');
@@ -963,6 +1099,20 @@ async function main() {
   await sleep(4000);
   cmd('tp Smith 7200 -59 7200');
   await sleep(5000);
+
+  // Nothing from any effect may outlive its effect: the whole world, tagged or not.
+  console.log('\n== 11. world effects left nothing behind ==');
+  const taggedLeft = await fxCount();
+  const anyLeft = await fxCount('', 'type=minecraft:block_display');
+  const sent = [smith, dummy, archer].map((b) => `${b.username} ${b.fxSpawns.length} spawned/${b.fxGone.length} removed`);
+  console.log(`   block displays sent to each client over the run: ${sent.join(', ')}`);
+  check(taggedLeft === 0, 'no tagged effect displays remain at the end', `${taggedLeft}`);
+  check(anyLeft === 0, 'no block displays of any kind remain at the end', `${anyLeft}`);
+  for (const b of [smith, dummy, archer]) {
+    check(b.fxGone.length >= b.fxSpawns.length,
+        `${b.username} was told to remove every effect display it was sent`,
+        `${b.fxGone.length}/${b.fxSpawns.length}`);
+  }
 
   console.log(`\n=========== ${failures === 0 ? 'ALL BOT CHECKS PASSED' : failures + ' BOT CHECK(S) FAILED'} ===========`);
   for (const b of [smith, dummy, archer]) b.quit();
