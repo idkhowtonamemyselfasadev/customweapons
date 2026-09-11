@@ -43,11 +43,7 @@ public final class ShockManager {
 
     private final Map<UUID, Long> armedArrows = new HashMap<>();
 
-    /** A stunned target: held at one spot until the tick it is released. */
-    private record Stun(LivingEntity victim, Vec3 at, long until) {
-    }
 
-    private final List<Stun> stunned = new ArrayList<>();
     private final Cooldowns cooldowns;
 
     public ShockManager(Cooldowns cooldowns) {
@@ -133,49 +129,14 @@ public final class ShockManager {
         return dealt;
     }
 
-    /**
-     * Roots the target. Slowness alone still lets a player creep and jump, so the server
-     * also puts them back where they stood every tick until the stun ends; on a vanilla
-     * client that reads as being held fast. Mobs are simply pinned.
-     */
     private void stun(LivingEntity victim, WeaponsConfig config) {
         if (config.shock_stun_ticks <= 0) {
             return;
         }
-        stunned.removeIf(s -> s.victim() == victim);
-        stunned.add(new Stun(victim, victim.position(), cooldowns.tick() + config.shock_stun_ticks));
-        victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, config.shock_stun_ticks, 6, false, false));
-        victim.addEffect(new MobEffectInstance(MobEffects.MINING_FATIGUE, config.shock_stun_ticks, 2, false, false));
-        victim.setDeltaMovement(Vec3.ZERO);
-        victim.hurtMarked = true;
-        if (victim instanceof ServerPlayer player) {
-            player.displayClientMessage(Component.literal("Stunned").withStyle(ChatFormatting.AQUA), true);
-        }
+        CustomWeapons.stuns().stun(victim, config.shock_stun_ticks, "Stunned");
         if (config.log_abilities) {
             CustomWeapons.LOGGER.info("ABILITY stun victim={} ticks={}", victim.getName().getString(),
                     config.shock_stun_ticks);
-        }
-    }
-
-    private void tickStuns() {
-        if (stunned.isEmpty()) {
-            return;
-        }
-        long now = cooldowns.tick();
-        Iterator<Stun> it = stunned.iterator();
-        while (it.hasNext()) {
-            Stun stun = it.next();
-            LivingEntity victim = stun.victim();
-            if (now >= stun.until() || victim.isRemoved() || !victim.isAlive()) {
-                it.remove();
-                continue;
-            }
-            Vec3 at = stun.at();
-            if (victim.position().distanceToSqr(at) > 0.0025) {
-                victim.teleportTo(at.x, at.y, at.z);
-            }
-            victim.setDeltaMovement(Vec3.ZERO);
-            victim.hurtMarked = true;
         }
     }
 
@@ -249,7 +210,6 @@ public final class ShockManager {
 
     /** Arrows that never hit anything would otherwise sit in the map forever. */
     public void onTick() {
-        tickStuns();
         if (armedArrows.isEmpty()) {
             return;
         }
@@ -264,6 +224,5 @@ public final class ShockManager {
 
     public void clear() {
         armedArrows.clear();
-        stunned.clear();
     }
 }

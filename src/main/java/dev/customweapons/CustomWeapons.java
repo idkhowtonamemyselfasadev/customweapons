@@ -50,6 +50,7 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
     private static final Cooldowns COOLDOWNS = new Cooldowns();
     private static final PlayerState STATE = new PlayerState(COOLDOWNS);
     private static final BleedManager BLEED = new BleedManager(COOLDOWNS);
+    private static final Stuns STUNS = new Stuns(COOLDOWNS);
     private static final ShockManager SHOCK = new ShockManager(COOLDOWNS);
     private static final Projectiles PROJECTILES = new Projectiles(COOLDOWNS);
     private static final Altars ALTARS = new Altars();
@@ -83,6 +84,10 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
 
     public static BleedManager bleed() {
         return BLEED;
+    }
+
+    public static Stuns stuns() {
+        return STUNS;
     }
 
     public static ShockManager shock() {
@@ -189,6 +194,7 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
         STATE.onTick(server);
         BLEED.onTick(server, config);
         SHOCK.onTick();
+        STUNS.onTick();
         PROJECTILES.onTick(server, config);
         ANIMATIONS.onTick(server);
         EFFECTS.onTick(server);
@@ -346,6 +352,24 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
         return root;
     }
 
+    /** {@code /customweapon altar seed [radius]}: builds the altars a pre-generated world never grew. */
+    private int seedAltars(CommandSourceStack source, int radius) {
+        ServerPlayer player = source.getPlayer();
+        net.minecraft.core.BlockPos around = player != null ? player.blockPosition() : new net.minecraft.core.BlockPos(0, 64, 0);
+        source.sendSuccess(() -> Component.literal("Seeding altars within " + radius + " blocks; this loads a chunk per region and can take a moment...")
+                .withStyle(ChatFormatting.GRAY), true);
+        int built = ALTARS.seed(source.getServer().overworld(), around, radius, config);
+        source.sendSuccess(() -> Component.literal("Built " + built + " altar(s). " + ALTARS.count() + " known in total:")
+                .withStyle(ChatFormatting.GREEN), true);
+        for (Altars.Site site : ALTARS.all()) {
+            CustomWeapon weapon = Weapons.byId(site.weapon());
+            source.sendSuccess(() -> Component.literal(" - ")
+                    .append(weapon == null ? Component.literal(site.weapon()) : weapon.displayName())
+                    .append(Component.literal("  " + site.x() + " " + site.y() + " " + site.z()).withStyle(ChatFormatting.GRAY)), false);
+        }
+        return built;
+    }
+
     private void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         // Open to everyone: these are the answers to the chat question on join.
         dispatcher.register(Commands.literal("weaponpack")
@@ -418,6 +442,11 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
                                             + nearest.x() + " " + nearest.y() + " " + nearest.z()), false);
                             return 1;
                         }))
+                        .then(Commands.literal("seed")
+                                .executes(context -> seedAltars(context.getSource(), 2500))
+                                .then(Commands.argument("radius", com.mojang.brigadier.arguments.IntegerArgumentType.integer(100, 20000))
+                                        .executes(context -> seedAltars(context.getSource(),
+                                                com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(context, "radius")))))
                         .then(Commands.literal("rebuild").executes(context -> {
                             int rebuilt = ALTARS.rebuildAll(context.getSource().getServer().overworld());
                             context.getSource().sendSuccess(() -> Component.literal(

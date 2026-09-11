@@ -159,6 +159,8 @@ assert_log "the shock stunned the target"          "ABILITY stun victim=Dummy ti
 assert_log "the shock executed a creeper"           "ABILITY shock hit victim=Creeper .* executed=true" -ge 1
 assert_log "frost stacked on a target"              "ABILITY frost"                   -ge 2
 assert_log "the shatter fired"                      "ABILITY shatter"                 -ge 1
+assert_log "the ice beam froze the target"          "ABILITY frostbeam player=Smith victim=Dummy" -ge 1
+assert_log "the ice beam can miss"                  "ABILITY frostbeam player=Smith victim=miss"  -ge 1
 assert_log "the harpoon fired"                      "ABILITY harpoon"                 -ge 1
 assert_log "a Hellfire bolt was armed"              "ABILITY hellfire arm"            -ge 1
 assert_log "the Hellfire bolt exploded"             "ABILITY hellfire explode"        -ge 1
@@ -168,7 +170,7 @@ assert_log "the altar forged a weapon"              "ALTAR forge .* weapon=blood
 assert_log "altars generate in newly generated chunks" "Weapon altar placed"           -ge 1
 # World effects: the keyframes in effects.json parse into the records at boot, and the
 # block displays they play never raise from the tick loop or the display mixins.
-assert_log "all nine world effects loaded from effects.json" "Loaded 9 world effects"      -ge 1
+assert_log "all ten world effects loaded from effects.json" "Loaded 10 world effects"     -ge 1
 assert_log "effects.json was readable"              "Could not read effects.json"     -eq 0
 assert_log "no exception out of the effects player or its display mixins" \
            "dev\.customweapons\.(Effects|mixin\.(Block)?DisplayInvoker)"            -eq 0

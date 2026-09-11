@@ -16,7 +16,10 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -60,9 +63,16 @@ public final class Frostbrand extends CustomWeapon {
                         .withBold(true).withItalic(false));
     }
 
+    public static final String BEAM = "frostbeam";
+
     @Override
     public List<Component> lore(WeaponsConfig config) {
         return List.of(
+                Weapons.loreLine(String.format("Ice Beam: right-click to freeze whatever is %.0f blocks ahead",
+                        config.frost_beam_range)),
+                Weapons.loreLine(String.format("It takes %.1f and is held in ice for %.1fs, cooldown %.0fs",
+                        config.frost_beam_damage, config.frost_beam_freeze_ticks / 20.0,
+                        config.frost_beam_cooldown_ticks / 20.0)),
                 Weapons.loreLine(String.format("Frost: every hit chills and slows for %.0fs",
                         config.frost_slowness_ticks / 20.0)),
                 Weapons.loreLine("Three quick hits freeze the target solid"),
@@ -94,6 +104,91 @@ public final class Frostbrand extends CustomWeapon {
     @Override
     public ItemAttributeModifiers attributes(WeaponsConfig config) {
         return Stats.melee(id(), config.frostbrand_attack_damage, config.frostbrand_attack_speed);
+    }
+
+    @Override
+    public InteractionResult onRightClick(ServerPlayer player, ItemStack weapon, WeaponsConfig config) {
+        int remaining = CustomWeapons.cooldowns().remaining(player, BEAM);
+        if (remaining > 0) {
+            player.displayClientMessage(Component.literal(String.format("Ice Beam  %.1fs", remaining / 20.0))
+                    .withStyle(ChatFormatting.GRAY), true);
+            return InteractionResult.PASS;
+        }
+        if (!(player.level() instanceof ServerLevel level)) {
+            return InteractionResult.PASS;
+        }
+        Vec3 from = player.getEyePosition();
+        Vec3 dir = player.getLookAngle().normalize();
+        Vec3 end = from.add(dir.scale(config.frost_beam_range));
+        // Stop at the first block in the way, then look for the first living thing along the ray.
+        net.minecraft.world.phys.BlockHitResult wall = level.clip(new net.minecraft.world.level.ClipContext(from, end,
+                net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, player));
+        if (wall.getType() != net.minecraft.world.phys.HitResult.Type.MISS) {
+            end = wall.getLocation();
+        }
+        LivingEntity target = null;
+        double best = Double.MAX_VALUE;
+        AABB sweep = new AABB(from, end).inflate(1.0);
+        for (LivingEntity candidate : level.getEntitiesOfClass(LivingEntity.class, sweep,
+                e -> e != player && e.isAlive() && !(e instanceof net.minecraft.world.entity.player.Player p && (p.isCreative() || p.isSpectator())))) {
+            java.util.Optional<Vec3> hit = candidate.getBoundingBox().inflate(0.35).clip(from, end);
+            if (hit.isPresent()) {
+                double d = hit.get().distanceToSqr(from);
+                if (d < best) {
+                    best = d;
+                    target = candidate;
+                }
+            }
+        }
+        Vec3 reach = target == null ? end : target.position().add(0, target.getBbHeight() * 0.5, 0);
+        CustomWeapons.cooldowns().set(player, BEAM, config.frost_beam_cooldown_ticks, weapon);
+
+        // The ray itself: a line of ice shards from the hand, and a trail of snow on the air.
+        CustomWeapons.effects().beam(level, from.add(dir.scale(1.0)).subtract(0, 0.3, 0), reach,
+                "minecraft:packed_ice", (int) Math.min(24, Math.max(6, from.distanceTo(reach) * 1.2)), 0.22f, 12);
+        double length = from.distanceTo(reach);
+        for (double t = 1; t < length; t += 0.8) {
+            Vec3 p = from.add(dir.scale(t));
+            level.sendParticles(ParticleTypes.SNOWFLAKE, p.x, p.y, p.z, 2, 0.08, 0.08, 0.08, 0.01);
+        }
+        level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.POWDER_SNOW_BREAK, SoundSource.PLAYERS, 1.0f, 0.6f);
+        level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.GLASS_PLACE, SoundSource.PLAYERS, 1.0f, 1.6f);
+
+        if (target == null) {
+            if (config.log_abilities) {
+                CustomWeapons.LOGGER.info("ABILITY frostbeam player={} victim=miss", player.getName().getString());
+            }
+            player.displayClientMessage(Component.literal("Ice Beam").withStyle(ChatFormatting.AQUA), true);
+            return InteractionResult.SUCCESS;
+        }
+        // Frozen solid where it stands: the ice closes around it, it is held, and it takes the hit.
+        LivingEntity victim = target;
+        Hurt.deal(victim, victim.damageSources().indirectMagic(player, player), (float) config.frost_beam_damage);
+        victim.setTicksFrozen(victim.getTicksRequiredToFreeze() + config.frost_beam_freeze_ticks);
+        CustomWeapons.stuns().stun(victim, config.frost_beam_freeze_ticks, "Frozen");
+        CustomWeapons.effects().play(level, "frost_beam", victim);
+        CustomWeapons.effects().later(61, () -> {
+            if (!victim.isRemoved()) {
+                level.sendParticles(new net.minecraft.core.particles.BlockParticleOption(
+                                ParticleTypes.BLOCK, Blocks.ICE.defaultBlockState()),
+                        victim.getX(), victim.getY() + 1.0, victim.getZ(), 80, 0.5, 0.9, 0.5, 0.2);
+                level.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
+                        SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 1.0f, 0.9f);
+            }
+        });
+        level.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
+                SoundEvents.PLAYER_HURT_FREEZE, SoundSource.PLAYERS, 1.0f, 1.0f);
+        if (config.log_abilities) {
+            CustomWeapons.LOGGER.info("ABILITY frostbeam player={} victim={} damage={}",
+                    player.getName().getString(), victim.getName().getString(),
+                    String.format("%.1f", config.frost_beam_damage));
+        }
+        CustomWeapons.animations().play(player, this, config);
+        player.displayClientMessage(Component.literal("Ice Beam  frozen ")
+                .append(victim.getName()).withStyle(ChatFormatting.AQUA), true);
+        return InteractionResult.SUCCESS;
     }
 
     @Override
