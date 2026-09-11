@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Voxel-sculpted 3D models for the seven custom weapons.
+"""Voxel-sculpted 3D models for the ten custom weapons.
 
 Every weapon is built upright on a 32x32x32 grid of half-unit voxels (so the model spans
 the 16-unit item box): grip at the bottom, business end at the top, one unit thick in Z.
@@ -76,6 +76,13 @@ class Volume:
     def rows(self, of, role, ys):
         for (x, y, z), r in list(self.v.items()):
             if r == of and y in ys:
+                self.v[(x, y, z)] = role
+
+    def etch(self, of, role, fn):
+        """Recolour voxels of a role where fn(x, y, z) holds: engraving that can never
+        leave the surface it is cut into."""
+        for (x, y, z), r in list(self.v.items()):
+            if r == of and fn(x + 0.5, y + 0.5, z + 0.5):
                 self.v[(x, y, z)] = role
 
 
@@ -321,6 +328,104 @@ def hellfire(v, pull=None, loaded=False):
         v.box(15, 29, 16, 31, "flame", 18, 19)
 
 
+def _seg_dist(x, y, a, b):
+    (ax, ay), (bx, by) = a, b
+    vx, vy = bx - ax, by - ay
+    t = max(0.0, min(1.0, ((x - ax) * vx + (y - ay) * vy) / max(vx * vx + vy * vy, 1e-6)))
+    return math.hypot(x - (ax + vx * t), y - (ay + vy * t))
+
+
+def dawnbreaker(v):
+    v.box(14, 0, 17, 2, "guard", 14, 17)                  # pommel
+    v.box(15, 0, 16, 1, "sun", 14, 17)
+    v.box(15, 3, 16, 9, "grip", 14, 17)
+    v.rows("grip", "wrap", {4, 6, 8})
+    v.box(10, 10, 21, 11, "guard", 14, 17)                # wide crossguard
+    v.box(10, 12, 10, 13, "guard", 14, 17)                # up-swept tips
+    v.box(21, 12, 21, 13, "guard", 14, 17)
+    v.taper(C, 12, 31, 3.8, 0.9, "blade")                 # broad blade
+    v.edge("blade", "edge")
+    # Three rays etched up the flat, radiating from the sun disc and cut off wherever they
+    # run out of blade.
+    def ray(x, y, z):
+        if not (17.5 <= y <= 28.5):
+            return False
+        return any(abs((x - 16) - k * (y - 12.5)) < 0.5 for k in (-0.42, 0.0, 0.42))
+    v.etch("blade", "ray", ray)
+    # The sun: a thick disc set through the guard with a bright core.
+    v.each(lambda x, y: (x - 16) ** 2 + (y - 12.5) ** 2 <= 3.6 ** 2, "sun", 13, 18)
+    v.each(lambda x, y: (x - 16) ** 2 + (y - 12.5) ** 2 <= 1.9 ** 2, "sunlight", 12, 19)
+    for dx, dy in ((0, 4), (4, 0), (-4, 0), (3, 3), (-3, 3), (3, -3), (-3, -3)):   # points of light around the disc
+        v.box(16 + dx - (1 if dx <= 0 else 0), int(12.5 + dy), 16 + dx - (1 if dx <= 0 else 0), int(12.5 + dy), "sunlight", 14, 17)
+
+
+def voidreaper(v):
+    v.box(15, 0, 16, 27, "haft", 14, 17)                  # long dark haft
+    v.box(15, 5, 16, 10, "grip", 14, 17)
+    v.rows("haft", "band", {2, 13, 20})                   # crying-obsidian bands
+    v.box(14, 0, 17, 1, "band", 14, 17)                   # butt cap
+    # The crescent: an arc about (16, 17) sweeping from above the socket over to the right
+    # and down, thick at the heel and drawn out to a point at the tip.
+    A0, A1 = 105.0, -30.0
+
+    def polar(x, y):
+        dx, dy = x - 16, y - 17
+        return math.hypot(dx, dy), math.degrees(math.atan2(dy, dx))
+
+    def radii(a):
+        t = (A0 - a) / (A0 - A1)
+        return 9.0 + 3.8 * t, 13.6 - 0.4 * t
+
+    def crescent(x, y, inner=None, outer=None):
+        d, a = polar(x, y)
+        if not (A1 <= a <= A0):
+            return False
+        r_in, r_out = radii(a)
+        lo = r_in if inner is None else r_in + inner
+        hi = r_out if outer is None else r_out - outer
+        return lo <= d <= hi
+    v.each(lambda x, y: crescent(x, y), "blade")
+    v.each(lambda x, y: crescent(x, y, outer=-1.0) and not crescent(x, y, outer=0.9), "edge")   # outer back edge
+    v.each(lambda x, y: crescent(x, y) and not crescent(x, y, inner=1.3), "void")               # void-light inner edge
+    v.box(13, 24, 18, 27, "sculk", 13, 18)                # sculk knot at the socket
+    v.box(15, 25, 16, 26, "sculkglow", 12, 19)
+    v.box(14, 23, 17, 23, "band", 14, 17)                 # collar under the knot
+
+
+def starfall(v):
+    v.box(15, 0, 16, 16, "haft", 14, 17)                  # short haft
+    v.box(14, 0, 17, 1, "band", 14, 17)                   # butt cap
+    v.rows("haft", "band", {4, 5, 9, 10, 14})
+    v.box(14, 15, 17, 16, "band", 13, 18)                 # collar under the head
+    v.box(9, 17, 22, 26, "stone", 12, 19)                 # squat head, 4 units thick
+    v.carve(lambda x, y, z: y >= 17 and abs(x - 16) + abs(y - 22) > 9.4)   # chamfered corners
+    v.rows("stone", "seam", {20, 23})                     # brick seams
+    v.etch("seam", "stone", lambda x, y, z: z < 13 or z > 18)   # seams only on the side faces
+    # Magma cracks glowing across the front and back faces and around the sides.
+    cracks = [((9.5, 19), (13.5, 22.5)), ((13.5, 22.5), (18, 21.5)), ((18, 21.5), (22.5, 25)),
+              ((12.5, 26), (16, 23)), ((16, 23), (17, 17.5))]
+    v.etch("stone", "magma", lambda x, y, z: (z < 13 or z > 18) and any(_seg_dist(x, y, a, b) < 0.6 for a, b in cracks))
+    v.etch("stone", "magma", lambda x, y, z: x < 10 and 19 <= y <= 21 and 14 <= z <= 17)
+    v.etch("stone", "magma", lambda x, y, z: x > 22 and 22 <= y <= 24 and 14 <= z <= 17)
+    v.etch("magma", "magmalight", lambda x, y, z: (14 <= x <= 17 and 21 <= y <= 23))
+    # Amethyst crystals jutting out of every face.
+    v.box(6, 21, 8, 23, "amethyst", 14, 17)               # left
+    v.box(5, 22, 5, 22, "amethystlight", 15, 16)
+    v.box(7, 18, 8, 19, "amethyst", 15, 16)
+    v.box(23, 19, 25, 21, "amethyst", 14, 17)             # right
+    v.box(26, 20, 26, 20, "amethystlight", 15, 16)
+    v.box(23, 24, 24, 25, "amethyst", 15, 16)
+    v.box(11, 27, 12, 28, "amethyst", 14, 17)             # top
+    v.box(17, 27, 18, 29, "amethyst", 14, 17)
+    v.box(17, 30, 18, 30, "amethystlight", 15, 16)
+    v.box(14, 27, 15, 27, "amethystlight", 15, 16)
+    v.box(20, 26, 21, 27, "amethyst", 15, 16)
+    v.box(14, 21, 16, 23, "amethyst", 10, 11)             # front
+    v.box(15, 22, 15, 22, "amethystlight", 9, 9)
+    v.box(17, 19, 19, 21, "amethyst", 20, 21)             # back
+    v.box(18, 20, 18, 20, "amethystlight", 22, 22)
+
+
 # --------------------------------------------------------------------- palettes
 PALETTES = {
     "bloodletter": {"blade": (66, 56, 64), "edge": (128, 114, 124), "vein": (178, 22, 28), "wrap": (30, 25, 28),
@@ -338,6 +443,13 @@ PALETTES = {
     "hellfire": {"stock": (50, 24, 28), "core": (62, 22, 12), "magma": (242, 122, 32), "iron": (62, 62, 68),
                  "limb": (232, 172, 44), "limbdark": (172, 112, 22), "flame": (255, 150, 22), "string": (202, 202, 202),
                  "star": (250, 250, 232), "bolt": (44, 32, 32)},
+    "dawnbreaker": {"blade": (236, 190, 48), "edge": (252, 234, 140), "ray": (255, 255, 236), "sun": (255, 160, 26),
+                    "sunlight": (255, 244, 170), "guard": (168, 112, 30), "grip": (78, 48, 26), "wrap": (214, 156, 44)},
+    "voidreaper": {"haft": (38, 28, 46), "band": (98, 42, 150), "grip": (22, 16, 26), "blade": (44, 38, 56),
+                   "edge": (118, 106, 138), "void": (186, 78, 255), "sculk": (12, 112, 120), "sculkglow": (44, 210, 214)},
+    "starfall": {"haft": (58, 44, 36), "band": (176, 132, 56), "stone": (36, 32, 40), "seam": (58, 52, 62),
+                 "magma": (255, 118, 28), "magmalight": (255, 196, 80), "amethyst": (150, 88, 222),
+                 "amethystlight": (216, 178, 255)},
 }
 
 # Translucent roles for the attack-frame effects: trails, arcs, flashes.
@@ -349,6 +461,9 @@ FX_ROLES = {
     "tidecaller": {"trail": (120, 200, 230, 150), "trail2": (200, 240, 255, 100)},
     "stormpiercer": {"arc": (220, 240, 255, 230), "arc2": (120, 170, 255, 190)},
     "hellfire": {"flash": (255, 210, 70, 210), "flash2": (255, 110, 20, 160)},
+    "dawnbreaker": {"trail": (255, 216, 96, 170), "trail2": (255, 255, 230, 110)},
+    "voidreaper": {"trail": (156, 56, 240, 160), "trail2": (222, 160, 255, 100)},
+    "starfall": {"trail": (255, 140, 40, 170), "burst": (176, 84, 244, 160)},
 }
 for _w, _roles in FX_ROLES.items():
     PALETTES[_w].update(_roles)
@@ -438,9 +553,36 @@ def fx_blast(v, frame):
                     v.box(x, y, x, y, role, 15, 17)
 
 
+def _arc(v, pivot, radii, a0, a1, role, step=2.5):
+    """A crescent: the band of radii about the pivot swept through a0..a1 (degrees from +y)."""
+    px, py = pivot
+    a = a0
+    while a <= a1:
+        rad = math.radians(a)
+        for r in radii:
+            x = int(round(px + math.sin(rad) * r))
+            y = int(round(py + math.cos(rad) * r))
+            v.box(x, y, x, y, role, 16, 16)
+        a += step
+
+
+def fx_reap(v, frame):
+    # The scythe's reap: a wide crescent trail, long as the blade, that opens to the swing
+    # side over the cut and trails off behind the blade as the stroke ends.
+    plan = {3: (-40, -10, 1.0), 4: (-40, 15, 1.0), 5: (-30, 45, 1.0), 6: (-10, 70, 1.0),
+            7: (15, 90, 0.9), 8: (40, 105, 0.75), 9: (65, 115, 0.55)}
+    if frame in plan:
+        a0, a1, k = plan[frame]
+        outer = [r * k for r in (19, 20, 21, 22)]
+        _arc(v, (16, 8), outer, a0, a1, "trail")
+        _arc(v, (16, 8), [r * k for r in (16, 17.5)], a0 + 4, a1 - 4, "trail2")
+        _arc(v, (16, 8), [23.5 * k], a0 + 2, a1 - 2, "trail2")
+
+
 WEAPON_FX = {
     "bloodletter": fx_slash, "frostbrand": fx_slash, "gale_edge": fx_thrust, "tidecaller": fx_thrust,
     "aegis_hammer": fx_slam, "stormpiercer": fx_shot, "hellfire": fx_blast,
+    "dawnbreaker": fx_slash, "voidreaper": fx_reap, "starfall": fx_slam,
 }
 
 
@@ -471,6 +613,9 @@ VARIANTS = [
     ("hellfire", "hellfire_pulling_1", lambda v: hellfire(v, pull=15), CROSSBOW),
     ("hellfire", "hellfire_pulling_2", lambda v: hellfire(v, pull=12), CROSSBOW),
     ("hellfire", "hellfire_loaded", lambda v: hellfire(v, pull=12, loaded=True), CROSSBOW),
+    ("dawnbreaker", "dawnbreaker", dawnbreaker, HANDHELD),
+    ("voidreaper", "voidreaper", voidreaper, HANDHELD),
+    ("starfall", "starfall", starfall, HANDHELD),
 ]
 
 

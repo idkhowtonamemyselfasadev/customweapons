@@ -39,6 +39,13 @@ public final class WeaponsConfig {
      * Without this, 6.0 DPS on a window that every hit refreshes never stops.
      */
     public double bleed_damage_budget = 12.0;
+    /**
+     * Exsanguinate, on right-click: every bleed the wielder owns within this many blocks
+     * bursts - its whole remaining budget lands at once - and each stack burst heals them.
+     */
+    public double exsanguinate_radius = 8.0;
+    public double exsanguinate_heal_per_stack = 2.0;
+    public int exsanguinate_cooldown_ticks = 400;
 
     // ------------------------------------------------------------------ Gale Edge
     public boolean gale_edge_enabled = true;
@@ -100,6 +107,10 @@ public final class WeaponsConfig {
     public int slam_resistance_ticks = 100;
     public double slam_knock_up = 0.35;
     public double slam_knock_out = 0.4;
+    /** Stagger: every {@code stagger_hits}th hit inside the window stuns the target this long. 0 turns it off. */
+    public int stagger_hits = 3;
+    public int stagger_window_ticks = 60;
+    public int stagger_stun_ticks = 20;
 
     // ----------------------------------------------------------------- Frostbrand
     public boolean frostbrand_enabled = true;
@@ -122,7 +133,7 @@ public final class WeaponsConfig {
     public double frost_beam_range = 24.0;
     public double frost_beam_damage = 6.0;
     public int frost_beam_freeze_ticks = 60;
-    public int frost_beam_cooldown_ticks = 160;
+    public int frost_beam_cooldown_ticks = 600;
     /** How long a shattered target stays frozen solid (rooted), and the pause before the frost can build again. */
     public int shatter_slowness_ticks = 60;
     public int shatter_slowness_amplifier = 3;
@@ -151,6 +162,69 @@ public final class WeaponsConfig {
     /** Leave fire behind, like a ghast fireball would. */
     public boolean hellfire_fire = false;
 
+    // ---------------------------------------------------------------- Dawnbreaker
+    public boolean dawnbreaker_enabled = true;
+    public double dawnbreaker_attack_damage = 9.0;
+    public double dawnbreaker_attack_speed = 1.7;
+    /** Every hit sets the target alight for this long. */
+    public int solar_fire_ticks = 60;
+    /** Extra magic damage on every hit while it is bright outside. */
+    public double solar_daylight_bonus = 2.0;
+    /** A kill heals the wielder this much. */
+    public double daylight_heal = 4.0;
+    /**
+     * Sunstrike, on right-click: the spot the wielder looks at (block or entity, up to
+     * sunstrike_range away) is marked, and sunstrike_delay_ticks later a pillar of light
+     * lands on it. Undead take double.
+     */
+    public double sunstrike_range = 24.0;
+    public double sunstrike_radius = 3.0;
+    public double sunstrike_damage = 9.0;
+    public int sunstrike_fire_ticks = 80;
+    public int sunstrike_delay_ticks = 20;
+    public int sunstrike_cooldown_ticks = 300;
+
+    // ----------------------------------------------------------------- Voidreaper
+    public boolean voidreaper_enabled = true;
+    public double voidreaper_attack_damage = 10.0;
+    public double voidreaper_attack_speed = 1.3;
+    /** Every hit withers the target for this long. */
+    public int reap_wither_ticks = 40;
+    /** A kill heals this much and grants Absorption I for this long. */
+    public double harvest_heal = 4.0;
+    public int harvest_absorption_ticks = 200;
+    /**
+     * Rift, on right-click: the wielder appears behind the first living thing along their
+     * look ray within rift_range, and their next hit inside backstab_window_ticks deals
+     * backstab_bonus_damage extra.
+     */
+    public double rift_range = 12.0;
+    public int rift_cooldown_ticks = 240;
+    public int backstab_window_ticks = 40;
+    public double backstab_bonus_damage = 6.0;
+
+    // ------------------------------------------------------------------- Starfall
+    public boolean starfall_enabled = true;
+    /** A vanilla mace is 6.0 at 0.6. The smash attack still works on top. */
+    public double starfall_attack_damage = 8.0;
+    public double starfall_attack_speed = 0.7;
+    /** Extra shove along the swing on every hit, blocks a tick. */
+    public double heavy_knockback = 0.5;
+    /**
+     * Comet, on right-click: launched straight up at this speed (1.5 is about 14 blocks),
+     * with fall immunity, and "falling as a comet" for comet_window_ticks: the first hit
+     * on the way down, or landing, is the impact.
+     */
+    public double comet_launch_velocity = 1.5;
+    public int comet_window_ticks = 100;
+    public int comet_fall_immunity_ticks = 120;
+    public int comet_cooldown_ticks = 400;
+    public double impact_radius = 4.0;
+    public double impact_damage = 8.0;
+    public int impact_fire_ticks = 40;
+    public double impact_knock_out = 0.8;
+    public double impact_knock_up = 0.4;
+
     // ---------------------------------------------------------------------- altars
     /** Altars generate in newly generated overworld chunks only. */
     public boolean altars_enabled = true;
@@ -173,7 +247,7 @@ public final class WeaponsConfig {
      * is dropped at their feet with a note; the one they had first is the one they keep.
      */
     public boolean one_weapon_per_player = true;
-    /** One temple per weapon too, so the seven of them are the map's landmarks. */
+    /** One temple per weapon too, so the ten of them are the map's landmarks. */
     public boolean one_altar_per_weapon = true;
     /** Tell everyone when a legendary is forged. */
     public boolean announce_forging = true;
@@ -193,9 +267,9 @@ public final class WeaponsConfig {
     /** With pack_required off: ask each player in chat, on join, whether they want the models. */
     public boolean pack_offer_on_join = true;
     /** A direct download link to the pack zip. A GitHub release asset works. */
-    public String pack_url = "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.2.1/CustomWeapons-Models.zip";
+    public String pack_url = "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.4.0/CustomWeapons-Models.zip";
     /** SHA-1 of that zip. Change it with the file, or clients keep a stale cached copy. */
-    public String pack_sha1 = "2dd32bea93bdc4e37be62da8fb4b34405f60a12c";
+    public String pack_sha1 = "1fb926c70c7c07d8b26e4ed12b61297926a826a4";
     public String pack_offer_message = "This server has 3D models for the legendary weapons. Want them?";
 
     // --------------------------------------------------------------- world effects

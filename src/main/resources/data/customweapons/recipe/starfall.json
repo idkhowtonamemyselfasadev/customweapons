@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "ABA",
+    "BWB",
+    "ACA"
+  ],
+  "key": {
+    "A": "minecraft:magma_block",
+    "B": "minecraft:amethyst_shard",
+    "W": "minecraft:mace",
+    "C": "minecraft:nether_star"
+  },
+  "result": {
+    "id": "minecraft:mace",
+    "count": 1,
+    "components": {
+      "minecraft:custom_data": {
+        "cw_weapon": "starfall"
+      }
+    }
+  }
+}

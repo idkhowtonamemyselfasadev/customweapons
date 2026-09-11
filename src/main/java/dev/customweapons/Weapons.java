@@ -2,6 +2,9 @@ package dev.customweapons;
 
 import dev.customweapons.weapon.AegisHammer;
 import dev.customweapons.weapon.Bloodletter;
+import dev.customweapons.weapon.Dawnbreaker;
+import dev.customweapons.weapon.Starfall;
+import dev.customweapons.weapon.Voidreaper;
 import dev.customweapons.weapon.Frostbrand;
 import dev.customweapons.weapon.GaleEdge;
 import dev.customweapons.weapon.Hellfire;
@@ -46,9 +49,13 @@ public final class Weapons {
     public static final Frostbrand FROSTBRAND = new Frostbrand();
     public static final Tidecaller TIDECALLER = new Tidecaller();
     public static final Hellfire HELLFIRE = new Hellfire();
+    public static final Dawnbreaker DAWNBREAKER = new Dawnbreaker();
+    public static final Voidreaper VOIDREAPER = new Voidreaper();
+    public static final Starfall STARFALL = new Starfall();
 
     public static final List<CustomWeapon> ALL =
-            List.of(BLOODLETTER, GALE_EDGE, STORMPIERCER, AEGIS_HAMMER, FROSTBRAND, TIDECALLER, HELLFIRE);
+            List.of(BLOODLETTER, GALE_EDGE, STORMPIERCER, AEGIS_HAMMER, FROSTBRAND, TIDECALLER, HELLFIRE,
+                    DAWNBREAKER, VOIDREAPER, STARFALL);
 
     private static final int SWEEP_SLOTS_PER_PLAYER = 41;
 

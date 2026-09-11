@@ -95,6 +95,23 @@ public abstract class CustomWeapon {
                                 WeaponsConfig config) {
     }
 
+    /** Once a server tick, for weapons that keep per-player state between events. */
+    public void onTick(net.minecraft.server.MinecraftServer server, WeaponsConfig config) {
+    }
+
+    /**
+     * Something died to this weapon's wielder: a swing, or ability damage credited to them.
+     *
+     * <p>From the death event, not the damage event: Fabric's after-damage hook does not run
+     * for the blow that kills, so a heal-on-kill that lives there never fires.
+     */
+    public void onKill(ServerPlayer killer, LivingEntity victim, WeaponsConfig config) {
+    }
+
+    /** A player has left: drop anything kept for them. */
+    public void forget(java.util.UUID player) {
+    }
+
     /**
      * Every tick for an armed projectile still in the world.
      *

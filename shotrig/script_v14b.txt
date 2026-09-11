@@ -1,0 +1,90 @@
+# Screenshot choreography. The player stands at 0 -60 0 facing south (+z); a husk with a
+# lot of health stands 2.5 blocks ahead as the target. Noon, no weather, no mobs.
+wait 60
+cmd gamemode survival
+cmd gamerule do_daylight_cycle false
+cmd gamerule do_weather_cycle false
+cmd gamerule spawn_mobs false
+cmd gamerule mob_griefing false
+cmd time set 6000
+cmd weather clear
+cmd kill @e[type=!player]
+cmd tp @s 0.5 -60 0.5 0 12
+cmd clear @s
+cmd effect give @s minecraft:resistance 9999 4 true
+cmd effect give @s minecraft:saturation 9999 4 true
+wait 20
+look 0 12
+wait 10
+look 0 12
+wait 10
+
+# ---- Starfall: the Comet and the impact, seen from behind and from the side
+cmd summon husk 0.5 -60 3.0 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk 3.0 -60 1.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk -2.5 -60 2.0 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd customweapon give @s starfall
+wait 20
+hotbar 0
+look 0 30
+wait 10
+use
+camera back
+wait 3
+shot 73_comet_launch_back_t3
+wait 12
+shot 74_comet_apex_back_t15
+wait 15
+shot 75_comet_falling_back_t30
+wait 6
+shot 76_comet_back_t36
+wait 3
+shot 77_comet_back_t39
+wait 3
+shot 78_comet_back_t42
+wait 3
+shot 79_comet_back_t45
+wait 3
+shot 80_comet_back_t48
+wait 4
+shot 81_comet_back_t52
+wait 6
+shot 82_comet_back_t58
+camera first
+look 0 40
+wait 2
+shot 83_impact_first_t62
+wait 30
+cmd kill @e[type=husk]
+cmd clear @s
+wait 10
+
+# ---- again, first person, looking down at the landing
+cmd tp @s 0.5 -60 0.5 0 12
+cmd summon husk 0.5 -60 2.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk -2.0 -60 1.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd customweapon give @s starfall
+wait 20
+hotbar 0
+look 0 60
+wait 10
+use
+wait 20
+look 0 75
+wait 16
+shot 84_impact_first_t36
+wait 3
+shot 85_impact_first_t39
+wait 3
+shot 86_impact_first_t42
+wait 3
+shot 87_impact_first_t45
+wait 3
+shot 88_impact_first_t48
+wait 4
+shot 89_impact_first_t52
+wait 30
+cmd kill @e[type=!player]
+cmd clear @s
+wait 20
+quit

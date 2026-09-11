@@ -135,8 +135,8 @@ public final class Effects {
         }
         Line line = new Line(from, to, beads, size, ticks);
         string(line, true);
-        beads.forEach(level::addFreshEntity);
         lines.add(line);
+        beads.forEach(level::addFreshEntity);
     }
 
     /** A ray of small blocks from one point to another, thinning out over {@code ticks}. */
@@ -177,8 +177,8 @@ public final class Effects {
         }
         Playing instance = new Playing(spec, made, from, null);
         apply(instance, 0, true);
-        made.forEach(part -> level.addFreshEntity(part.entity));
         playing.add(instance);
+        made.forEach(part -> level.addFreshEntity(part.entity));
     }
 
     private static void string(Line line, boolean initial) {
@@ -255,10 +255,10 @@ public final class Effects {
         }
         Playing instance = new Playing(spec, parts, origin, follow);
         apply(instance, 0, true);
+        playing.add(instance);   // before spawning: the load hook discards untracked pieces
         for (Part part : parts) {
             level.addFreshEntity(part.entity);
         }
-        playing.add(instance);
     }
 
     public void play(ServerLevel level, String name, Entity follow) {
@@ -374,6 +374,30 @@ public final class Effects {
         d.customweapons$setTransformation(new Transformation(offset, rot, new Vector3f(s[0], s[1], s[2]),
                 new Quaternionf()));
         d.customweapons$setTransformationInterpolationDelay(0);
+    }
+
+    /**
+     * An effect block that was saved with a chunk - the chunk unloaded mid-effect, or the
+     * server crashed - comes back on chunk load with nobody driving it. Anything with the
+     * tag that is not one of the pieces currently playing is a leftover and goes.
+     */
+    public void onEntityLoad(Entity entity) {
+        if (!(entity instanceof Display) || !entity.getTags().contains(TAG)) {
+            return;
+        }
+        for (Playing instance : playing) {
+            for (Part part : instance.parts) {
+                if (part.entity == entity) {
+                    return;
+                }
+            }
+        }
+        for (Line line : lines) {
+            if (line.beads.contains(entity)) {
+                return;
+            }
+        }
+        entity.discard();
     }
 
     /** Effects do not survive a restart: anything tagged from a crashed run is removed. */

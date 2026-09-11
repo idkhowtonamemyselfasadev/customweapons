@@ -1,7 +1,7 @@
 # Custom Weapons
 
 Seven craftable weapons with abilities for **Minecraft 1.21.11 Fabric**. Built for an SMP:
-**one of each weapon exists on the whole world**, forged once, at one of seven temples that
+**one of each weapon exists on the whole world**, forged once, at one of ten temples that
 generate somewhere out in the wild.
 
 **Players install nothing.** The mod is server-side only: no client entrypoint, no new
@@ -24,6 +24,9 @@ Built and verified against a real 1.21.11 dedicated server — see [Testing](#te
 | **Frostbrand** | iron sword | 8.0 | 1.6 | 12.8, shatter +8.0 | 5 s after a shatter (target frozen 3 s) |
 | **Tidecaller** | trident | 10.0 | 1.1 | 11.0, +4.0 wet | 10 s |
 | **Hellfire** | crossbow | bolt + blast | — | — | 8 s |
+| **Dawnbreaker** | golden sword | 9.0, +2.0 by day | 1.7 | 15.3 by day, sunstrike 9.0 | 15 s |
+| **Voidreaper** | netherite hoe | 10.0 | 1.3 | 13.0, backstab +6.0 | 12 s |
+| **Starfall** | mace | 8.0 | 0.7 | 5.6, impact 8.0 in 4 blocks | 20 s |
 
 A vanilla netherite sword is 12.8 DPS, a netherite axe 10.0, an iron sword 9.6 and a trident
 9.9. These are legendaries, one of each on the world: each matches or beats its vanilla
@@ -40,6 +43,9 @@ counterpart on raw damage, and the ability is on top. All of it is in the config
 - One bleed per victim. A second Bloodletter user takes over the existing one rather than
   running a parallel stack. Cleared by milk, death and a dimension change.
 - Bleed kills are credited to whoever applied it, even if they log out mid-bleed.
+- **Exsanguinate** (right-click, 20 s): every bleed you own within 8 blocks bursts — the whole
+  rest of its budget lands at once as one hit, the bleed ends, and you heal 2.0 per stack
+  burst. With nothing bleeding nearby it says so and costs nothing.
 
 ### Gale Edge — mobility duellist
 
@@ -80,12 +86,15 @@ counterpart on raw damage, and the ability is on top. All of it is in the config
 - Built on a netherite **axe**, not a mace: a mace's fall-distance smash would stack on top
   of the slam and blow past the balance ceiling. The axe keeps the vanilla shield disable.
 
+- **Stagger** (passive): every third hit within 3 s of the last stuns the target for 1 s —
+  rooted and unable to jump, though it still takes knockback.
+
 ### Frostbrand — the ice beam, and frost on every hit
 
-- **Ice Beam** (right-click, 8 s): a ray of ice up to 24 blocks along your look. The first
+- **Ice Beam** (right-click, 30 s): a ray of ice up to 24 blocks along your look. The first
   thing it touches takes 6.0, is **frozen solid for 3 s** - the ice closes around it, it
-  cannot move or jump - and the ice bursts when it thaws. A beam that hits nothing still
-  costs the cooldown.
+  cannot move, jump, or be knocked back, and a killing blow leaves the body where it stood
+  - and the ice bursts when it thaws. A beam that hits nothing still costs the cooldown.
 
 - Every hit adds **frost** — vanilla's own powder-snow freeze counter, so a player sees the
   frost creep in from the edges of the screen and a mob shivers — and Slowness II for 2 s.
@@ -112,11 +121,60 @@ counterpart on raw damage, and the ability is on top. All of it is in the config
 - Multishot fires three bolts in one tick and only the first is armed, so a volley is one
   blast, not three.
 
+### Dawnbreaker — the sun on a golden sword
+
+- **Sunstrike** (right-click, 15 s): the spot you are looking at — a block or a creature up to
+  24 blocks away — is marked with a rising ring of light, and one second later a pillar of
+  sunlight lands on it: 9.0 to everything within 3 blocks, **double to the undead**, and it
+  sets them alight for 4 s. Looking at the open sky does nothing and costs nothing.
+- **Solar Brand** (passive): every hit burns for 3 s, and while it is **bright outside** every
+  hit lands +2.0 on top.
+- **Daylight** (passive): a kill heals you 4.0.
+- 9.0 at 1.7, and **unbreakable** — a gold sword would otherwise be gone in a day.
+
+### Voidreaper — the scythe
+
+- **Rift** (right-click, 12 s): the first creature along your look within 12 blocks is the
+  mark. You are torn through the void and appear **right behind it**, facing it. Your next
+  hit within 2 s is a **Backstab**, +6.0. No mark on the ray: nothing happens, no cooldown.
+- **Wither** (passive): every hit withers for 2 s.
+- **Soul Harvest** (passive): a kill heals you 4.0 and shields you with 4 absorption for 10 s.
+- 10.0 at 1.3 on a netherite hoe, which vanilla treats as a tool: it breaks blocks at hoe
+  speed and is still a legendary weapon in the hand.
+
+### Starfall — the meteor
+
+- **Comet** (right-click, 20 s, from the ground): you are launched straight up, about 14
+  blocks, with 6 s of fall immunity, and you are *falling as a comet* for the next 5 s.
+- **Impact**: while falling as a comet, your first hit **or** touching the ground again is the
+  impact — 8.0 to everything within 4 blocks, knocked away and set alight for 2 s. The
+  vanilla mace smash still lands on top of it, so a hit from the top of the arc is the
+  smash, the impact and the swing at once.
+- **Heavy** (passive): every hit shoves the target half a block further along your swing.
+- 8.0 at 0.7 over a vanilla mace's 6.0 at 0.6.
+
+---
+
+## Screenshots
+
+In-game, vanilla client with the pack, taken by the rig in `shotrig/`. The full set with
+every animation frame is in `shotrig/shots_final/` and `shotrig/shots_v14/`.
+
+| | | |
+|---|---|---|
+| ![Bloodletter cut](docs/screenshots/03_bloodletter_hit_t4.jpg) | ![Frostbrand frost](docs/screenshots/06_frostbrand_hit1.jpg) | ![Frozen solid](docs/screenshots/09_frostbrand_frozen_t9.jpg) |
+| ![Gale Edge dash](docs/screenshots/13_gale_dash_t3.jpg) | ![Aegis slam](docs/screenshots/18_hammer_slam_t5.jpg) | ![Tidecaller harpoon](docs/screenshots/23_tidecaller_harpoon_t6.jpg) |
+| ![Stormpiercer shock](docs/screenshots/28_bow_shock_t12.jpg) | ![Hellfire blast](docs/screenshots/32_hellfire_blast_t5.jpg) | ![Hellfire scorch](docs/screenshots/34_hellfire_scorch.jpg) |
+| ![Dawnbreaker](docs/screenshots/36_dawnbreaker_idle.jpg) | ![Sunstrike mark](docs/screenshots/41_sunstrike_mark_t15.jpg) | ![Sunstrike pillar](docs/screenshots/43_sunstrike_pillar_t7.jpg) |
+| ![Voidreaper](docs/screenshots/46_voidreaper_idle.jpg) | ![Rift](docs/screenshots/48_rift_t6.jpg) | ![Behind the mark](docs/screenshots/49_rift_thirdperson.jpg) |
+| ![Starfall](docs/screenshots/54_starfall_idle.jpg) | ![Comet](docs/screenshots/59_comet_rising_t16.jpg) | ![Impact](docs/screenshots/76_comet_back_t36.jpg) |
+| ![Impact fire](docs/screenshots/80_comet_back_t48.jpg) | ![Exsanguinate](docs/screenshots/68_exsanguinate_t6.jpg) | ![Stagger](docs/screenshots/70_stagger_t3.jpg) |
+
 ---
 
 ## Recipes
 
-All seven fill the whole grid, with the base weapon in the centre, so none can collide with or
+All ten fill the whole grid, with the base weapon in the centre, so none can collide with or
 shadow a vanilla recipe. The shape is the same every time — **4 in the corners, 3 around the
 weapon, 1 underneath it** — and every slot is something you have to go somewhere dangerous for.
 
@@ -136,10 +194,15 @@ blue ice   prismarine crystals   blue ice            nautilus shell  sea lantern
 prismarine crystals IRON SWORD prismarine crystals   sea lantern      TRIDENT     sea lantern
 blue ice  enchanted golden apple blue ice            nautilus shell    conduit    nautilus shell
 
-Hellfire
-blaze rod    magma block    blaze rod
-magma block   CROSSBOW     magma block
-blaze rod    nether star    blaze rod
+Hellfire                                             Dawnbreaker
+blaze rod    magma block    blaze rod                ochre froglight   blaze rod   ochre froglight
+magma block   CROSSBOW     magma block               blaze rod      GOLDEN SWORD   blaze rod
+blaze rod    nether star    blaze rod                ochre froglight totem of undying ochre froglight
+
+Voidreaper                                           Starfall
+crying obsidian  echo shard  crying obsidian         magma block  amethyst shard  magma block
+echo shard    NETHERITE HOE   echo shard             amethyst shard    MACE      amethyst shard
+crying obsidian sculk catalyst crying obsidian       magma block   nether star    magma block
 ```
 
 | Weapon | Price, on top of the base weapon | Where that sends you |
@@ -151,6 +214,9 @@ blaze rod    nether star    blaze rod
 | Frostbrand | 3 prismarine crystals, 4 blue ice, 1 enchanted golden apple | ocean monuments, ice spikes, and loot chests |
 | Tidecaller | 3 sea lanterns, 4 nautilus shells, 1 conduit | ocean monuments and drowned |
 | Hellfire | 3 magma blocks, 4 blaze rods, 1 nether star | nether fortresses and the Wither |
+| Dawnbreaker | 3 blaze rods, 4 ochre froglights, 1 totem of undying | nether fortresses, mangrove swamps, a raid |
+| Voidreaper | 3 echo shards, 4 crying obsidian, 1 sculk catalyst | ancient cities and the Warden's own ground |
+| Starfall | 3 amethyst shards, 4 magma blocks, 1 nether star | geodes and the Wither |
 
 You have to **already own the base weapon** — the recipe upgrades a netherite sword, diamond
 sword, bow or netherite axe rather than building one from nothing. Crafting does **not** carry
@@ -239,7 +305,7 @@ whoever forged it. The temple becomes a monument.
 ### One temple per weapon
 
 With `one_altar_per_weapon`, once a weapon's temple exists somewhere in the world no second
-one is ever built. A world ends up with exactly seven landmarks and finding them is the
+one is ever built. A world ends up with exactly ten landmarks and finding them is the
 content. Placement is still seed-deterministic and only in newly generated chunks.
 
 ### The rest of the SMP pass
@@ -273,7 +339,7 @@ CustomWeapons ready: 4 weapons craftable
 |---|---|
 | `/customweapon give <players> <weapon>` | Hands out a finished weapon |
 | `/customweapon altar seed [radius]` | Builds the altars a world that was pre-generated before the mod never grew: walks every region within the radius (2,500 by default), loads its one chosen chunk and lets placement run, then lists the temples |
-| `/customweapon list` | The seven weapons and whether each is enabled |
+| `/customweapon list` | The ten weapons and whether each is enabled |
 | `/customweapon altar place <weapon>` | Builds an altar where you stand |
 | `/customweapon altar find` | Coordinates of the nearest known altar |
 | `/customweapon altar rebuild` | Rebuilds every known altar to the current design |
@@ -362,7 +428,7 @@ off the hammer, lightning crawling up the bowstring, a muzzle flash on the cross
 The hash has to change with the file, or clients keep a stale cached copy. Leave vanilla's
 `resource-pack` lines out of `server.properties`, or players get two prompts.
 
-## Adding an eighth weapon
+## Adding an eleventh weapon
 
 One class extending `CustomWeapon`, one line in `Weapons.ALL`, one recipe JSON. Nothing else
 in the mod needs to know about it.

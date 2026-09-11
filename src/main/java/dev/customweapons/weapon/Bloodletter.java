@@ -58,7 +58,49 @@ public final class Bloodletter extends CustomWeapon {
                         config.bleed_tick_interval_ticks / 20.0,
                         config.bleed_duration_ticks / 20.0)),
                 Weapons.loreLine(String.format("Bleed does at most %.1f before it ends",
-                        config.bleed_damage_budget)));
+                        config.bleed_damage_budget)),
+                Weapons.loreLine(String.format("Exsanguinate: right-click to burst every bleed within %.0f blocks",
+                        config.exsanguinate_radius)),
+                Weapons.loreLine(String.format("The rest of each bleed lands at once and heals you %.1f a stack, cooldown %.0fs",
+                        config.exsanguinate_heal_per_stack, config.exsanguinate_cooldown_ticks / 20.0)));
+    }
+
+    public static final String EXSANGUINATE = "exsanguinate";
+
+    @Override
+    public net.minecraft.world.InteractionResult onRightClick(ServerPlayer player, ItemStack weapon, WeaponsConfig config) {
+        int remaining = CustomWeapons.cooldowns().remaining(player, EXSANGUINATE);
+        if (remaining > 0) {
+            player.displayClientMessage(Component.literal(String.format("Exsanguinate  %.1fs", remaining / 20.0))
+                    .withStyle(ChatFormatting.GRAY), true);
+            return net.minecraft.world.InteractionResult.PASS;
+        }
+        dev.customweapons.BleedManager.Burst burst = CustomWeapons.bleed().burst(player, config.exsanguinate_radius, config);
+        if (burst.victims() == 0) {
+            player.displayClientMessage(Component.literal("Exsanguinate  nothing bleeding")
+                    .withStyle(ChatFormatting.GRAY), true);
+            return net.minecraft.world.InteractionResult.PASS;
+        }
+        double heal = burst.stacks() * config.exsanguinate_heal_per_stack;
+        if (heal > 0) {
+            player.heal((float) heal);
+        }
+        CustomWeapons.cooldowns().set(player, EXSANGUINATE, config.exsanguinate_cooldown_ticks, weapon);
+        CustomWeapons.animations().play(player, this, config);
+        if (player.level() instanceof net.minecraft.server.level.ServerLevel level) {
+            level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                    net.minecraft.sounds.SoundEvents.WITHER_HURT, net.minecraft.sounds.SoundSource.PLAYERS, 0.6f, 1.6f);
+            level.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART,
+                    player.getX(), player.getY() + 1.2, player.getZ(), 4, 0.3, 0.3, 0.3, 0.0);
+        }
+        if (config.log_abilities) {
+            CustomWeapons.LOGGER.info("ABILITY exsanguinate player={} victims={} damage={} heal={}",
+                    player.getName().getString(), burst.victims(),
+                    String.format("%.1f", burst.damage()), String.format("%.1f", heal));
+        }
+        player.displayClientMessage(Component.literal(String.format("Exsanguinate  %d burst, +%.1f",
+                burst.victims(), heal)).withStyle(ChatFormatting.RED), true);
+        return net.minecraft.world.InteractionResult.SUCCESS;
     }
 
     @Override

@@ -230,6 +230,144 @@ def build():
     ], follow=False))
     fx["hell_burst"] = {"ticks": 100, "parts": parts}
 
+    # ---------------------------------------------------------------- Dawnbreaker
+    # The mark: a thin gold ring rises off the ground and tightens on the point, with a
+    # faint shaft of light standing over it, for the second before the strike.
+    parts = []
+    n = 10
+    for i in range(n):
+        a = 2 * math.pi * i / n
+        keys = []
+        for t, r, y, w in ((0, 2.8, 0.05, 0.9), (10, 1.8, 0.6, 0.7), (18, 0.7, 1.3, 0.45), (20, 0.3, 1.5, 0.01)):
+            keys.append(key(t, (math.cos(a) * r, y, math.sin(a) * r), (w, 0.08, 0.16), (0, -math.degrees(a), 0)))
+        parts.append(part("minecraft:gold_block", keys, follow=False, bright=True, ease="linear"))
+    parts.append(part("minecraft:yellow_stained_glass", [
+        key(0, (0, 3.0, 0), (0.01, 0.01, 0.01)),
+        key(4, (0, 3.0, 0), (0.35, 6.0, 0.35), (0, 20, 0)),
+        key(16, (0, 3.0, 0), (0.25, 6.0, 0.25), (0, 120, 0)),
+        key(20, (0, 3.0, 0), (0.01, 0.01, 0.01), (0, 160, 0)),
+    ], follow=False, bright=True))
+    fx["sun_telegraph"] = {"ticks": 20, "parts": parts}
+
+    # The strike: a column of sunlight drops from fourteen blocks up, hits the ground and
+    # flattens into a ring of gold that expands and fades; a few embers arc away.
+    parts = [
+        part("minecraft:glowstone", [
+            key(0, (0, 14.0, 0), (0.8, 0.01, 0.8)),
+            key(2, (0, 7.5, 0), (1.4, 13.0, 1.4)),
+            key(5, (0, 3.0, 0), (2.2, 6.0, 2.2), (0, 30, 0)),
+            key(9, (0, 1.0, 0), (3.4, 2.0, 3.4), (0, 60, 0)),
+            key(14, (0, 0.3, 0), (4.6, 0.4, 4.6), (0, 90, 0)),
+            key(18, (0, 0.1, 0), (0.01, 0.01, 0.01), (0, 110, 0)),
+        ], follow=False, bright=True),
+        part("minecraft:yellow_stained_glass", [
+            key(0, (0, 14.0, 0), (1.6, 0.01, 1.6)),
+            key(3, (0, 7.0, 0), (2.4, 14.0, 2.4), (0, 45, 0)),
+            key(7, (0, 5.0, 0), (2.0, 10.0, 2.0), (0, 65, 0)),
+            key(12, (0, 2.5, 0), (1.2, 5.0, 1.2), (0, 90, 0)),
+            key(16, (0, 1.0, 0), (0.01, 0.01, 0.01), (0, 100, 0)),
+        ], follow=False, bright=True),
+    ]
+    parts += ring("minecraft:gold_block", 12, 4, 22, 0.5, 4.2, 0.08, 0.55, 0.12, fade_from=0.45)
+    parts += arc_out(rng, "minecraft:ochre_froglight", 6, 4, 28, 0.4, 3.4, 0.4, 1.6, 0.22, bright=True)
+    fx["sunstrike"] = {"ticks": 30, "parts": parts}
+
+    # ----------------------------------------------------------------- Voidreaper
+    # The rift: a tear of crying-obsidian and purpur shards spiralling inward and closing
+    # around a slit of void light, played both where the wielder left and where they land.
+    parts = [part("minecraft:purple_stained_glass", [
+        key(0, (0, 1.1, 0), (0.15, 2.2, 0.15)),
+        key(3, (0, 1.1, 0), (0.45, 2.5, 0.45), (0, 45, 0)),
+        key(9, (0, 1.1, 0), (0.12, 2.2, 0.12), (0, 135, 0)),
+        key(12, (0, 1.1, 0), (0.01, 0.01, 0.01), (0, 180, 0)),
+    ], follow=False, bright=True)]
+    n = 8
+    for i in range(n):
+        a0 = 2 * math.pi * i / n
+        y = 1.0 + rng.uniform(-0.5, 0.6)
+        block = "minecraft:crying_obsidian" if i % 2 == 0 else "minecraft:purpur_block"
+        keys = []
+        for t, r, turn, s in ((0, 1.8, 0.0, 0.22), (4, 1.1, 1.4, 0.24), (8, 0.45, 2.8, 0.18), (11, 0.05, 3.6, 0.01)):
+            a = a0 + turn
+            keys.append(key(t, (math.cos(a) * r, y, math.sin(a) * r), cube(s), (turn * 60, math.degrees(a), turn * 40)))
+        parts.append(part(block, keys, follow=False, bright=True, ease="linear"))
+    fx["rift_open"] = {"ticks": 12, "parts": parts}
+
+    # The harvest: four pale soul wisps rise out of the victim and drift up, fading.
+    parts = [part("minecraft:soul_fire", [
+        key(0, (0, 0.05, 0), (0.6, 0.01, 0.6)),
+        key(3, (0, 0.5, 0), (0.9, 1.0, 0.9), (0, 30, 0)),
+        key(8, (0, 0.9, 0), (0.01, 0.01, 0.01), (0, 60, 0)),
+    ], follow=False, bright=True)]
+    for i in range(4):
+        a = math.pi / 4 + i * math.pi / 2
+        x0, z0 = math.cos(a) * 0.35, math.sin(a) * 0.35
+        keys = []
+        for t in range(0, 17, 4):
+            u = t / 16
+            drift = math.sin(u * math.pi * 1.5 + i) * 0.35
+            s = 0.28 * (1 - u * 0.9) if t < 16 else 0.01
+            keys.append(key(t, (x0 + drift, 0.9 + u * 2.4, z0 - drift * 0.5), cube(s), (0, u * 180, u * 90)))
+        parts.append(part("minecraft:soul_lantern", keys, follow=False, bright=True, ease="linear"))
+    fx["soul_harvest"] = {"ticks": 16, "parts": parts}
+
+    # ------------------------------------------------------------------- Starfall
+    # The launch: magma and blackstone dust blown out in a ring at ground level, and a
+    # short burst of embers straight up after the wielder.
+    parts = ring("minecraft:magma_block", 8, 0, 8, 0.3, 2.8, 0.08, 0.4, 0.12, fade_from=0.4, bright=True)
+    parts += ring("minecraft:blackstone", 10, 1, 9, 0.5, 3.2, 0.06, 0.35, 0.08, fade_from=0.5)
+    for i in range(6):
+        a = 2 * math.pi * i / 6
+        x, z = math.cos(a) * 0.35, math.sin(a) * 0.35
+        parts.append(part("minecraft:magma_block", [
+            key(0, (x, 0.2, z), cube(0.05)),
+            key(3, (x * 1.5, 1.8, z * 1.5), cube(0.2), (a * 57.3, 90, 0)),
+            key(9, (x * 2.0, 4.0, z * 2.0), cube(0.01), (a * 57.3, 270, 0)),
+        ], follow=False, bright=True))
+    fx["comet_launch"] = {"ticks": 10, "parts": parts}
+
+    # The impact: a flash of orange that expands and vanishes in four ticks, magma and
+    # blackstone chunks arcing out, a flat ring of basalt, and amethyst shards flung up.
+    parts = [part("minecraft:orange_stained_glass", [
+        key(0, (0, 0.6, 0), cube(0.3)),
+        key(2, (0, 1.0, 0), cube(3.2), (0, 45, 0)),
+        key(4, (0, 1.0, 0), cube(0.01), (0, 90, 0)),
+    ], follow=False, bright=True)]
+    parts += arc_out(rng, "minecraft:magma_block", 8, 1, 16, 0.5, 4.6, 0.2, 1.8, 0.3, bright=True)
+    parts += arc_out(rng, "minecraft:blackstone", 8, 1, 18, 0.5, 4.0, 0.2, 1.4, 0.36)
+    parts += ring("minecraft:basalt", 12, 2, 16, 0.6, 5.2, 0.06, 0.5, 0.1, fade_from=0.5)
+    for i in range(5):
+        a = 2 * math.pi * i / 5 + rng.uniform(-0.3, 0.3)
+        r = rng.uniform(0.3, 1.2)
+        x, z = math.cos(a) * r, math.sin(a) * r
+        h = rng.uniform(2.4, 3.6)
+        parts.append(part("minecraft:amethyst_block", [
+            key(1, (x, 0.3, z), cube(0.05)),
+            key(10, (x * 1.4, h, z * 1.4), cube(0.22), (120, a * 57.3, 60)),
+            key(26, (x * 1.8, 0.1, z * 1.8), cube(0.2), (300, a * 57.3, 200)),
+            key(30, (x * 1.8, 0.05, z * 1.8), cube(0.01), (300, a * 57.3, 200)),
+        ], follow=False, bright=True, ease="linear"))
+    fx["meteor_impact"] = {"ticks": 30, "parts": parts}
+
+    # ---------------------------------------------------------------- Bloodletter
+    # Exsanguinate: every bleed bursts at once - shards of red flung out and down, and a
+    # dark-red ring at chest height that expands and fades.
+    parts = arc_out(rng, "minecraft:redstone_block", 8, 0, 10, 0.2, 1.6, 1.0, 0.5, 0.16, follow=True, drop=1.0)
+    parts += ring("minecraft:nether_wart_block", 8, 1, 11, 0.3, 1.9, 1.1, 0.3, 0.08, fade_from=0.45, follow=True)
+    fx["blood_burst"] = {"ticks": 12, "parts": parts}
+
+    # --------------------------------------------------------------- Aegis Hammer
+    # Stagger: three gold sparks orbit the head for the second the stun lasts, shrinking away.
+    parts = []
+    for i in range(3):
+        keys = []
+        for t in range(0, 21, 2):
+            a = i * 2 * math.pi / 3 + t * 0.35
+            s = 0.18 * (1 - t / 20) + 0.01
+            keys.append(key(t, (math.cos(a) * 0.5, 2.2, math.sin(a) * 0.5), cube(s), (t * 20, -math.degrees(a), t * 20)))
+        parts.append(part("minecraft:gold_block", keys, bright=True, ease="linear"))
+    fx["stagger"] = {"ticks": 20, "parts": parts}
+
     return fx
 
 
