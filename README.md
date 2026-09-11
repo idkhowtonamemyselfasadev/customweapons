@@ -20,7 +20,7 @@ Built and verified against a real 1.21.11 dedicated server — see [Testing](#te
 |---|---|---|---|---|---|
 | **Bloodletter** | netherite sword | 4.0 | 2.0 | 8.0 swings + 9.0 bleed = 17.0 | none |
 | **Gale Edge** | diamond sword | 7.0 | 1.8 | 12.6, +4.0 after a dash | 8 s |
-| **Stormpiercer** | bow | 10.0 full draw, +6.0 lightning | — | — | 30 s |
+| **Stormpiercer** | bow | 10.0 full draw, +6.0 lightning | — | — | 30 s, unbreakable |
 | **Aegis Hammer** | netherite axe | 11.0 | 0.9 | 9.9, slam 8.0 | 15 s |
 | **Frostbrand** | iron sword | 8.0 | 1.6 | 12.8, shatter +8.0 | 5 s after a shatter (target frozen 3 s) |
 | **Tidecaller** | trident | 10.0 | 1.1 | 11.0, +4.0 wet | 10 s |
@@ -474,7 +474,7 @@ packets. It asserts on both what the clients received and what the server logged
 - the first hit after a dash is a Momentum Strike
 - a slam in mid-air does nothing; on the ground it damages and slows a nearby player
 - one arrow is armed by a full draw and none by a partial draw, and the shock lands
-- the Stormpiercer refuses to be enchanted
+- the Stormpiercer refuses to be enchanted, and is unbreakable since it can never take Unbreaking
 - `/customweapon reload` re-stats a weapon already in an inventory
 - the first weapon is handed out and announced to everyone as "1 of 3"; the second and
   third go out and the third is announced as the last; a fourth cannot be given by command;

@@ -14,6 +14,7 @@ import net.minecraft.world.entity.player.Player;
 
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -89,14 +90,20 @@ public final class BleedManager {
             return;
         }
         long now = clock.tick();
-        Iterator<Map.Entry<UUID, Bleed>> it = active.entrySet().iterator();
-        while (it.hasNext()) {
-            Bleed bleed = it.next().getValue();
+        // A snapshot, never the live map: a bleed tick that kills its victim fires the
+        // death event, which clears that victim's bleed from `active` while this loop is
+        // still walking it - and a HashMap iterator throws on that. (It crashed a live
+        // server once.) Removals go by key, after the damage.
+        for (Map.Entry<UUID, Bleed> entry : List.copyOf(active.entrySet())) {
+            Bleed bleed = entry.getValue();
+            if (active.get(entry.getKey()) != bleed) {
+                continue;   // ended by something this tick already did
+            }
             LivingEntity victim = bleed.victim;
             if (victim == null || !victim.isAlive() || victim.isRemoved()
                     || now >= bleed.expiresAt || bleed.budget <= 0
                     || !(victim.level() instanceof ServerLevel level)) {
-                it.remove();
+                active.remove(entry.getKey());
                 continue;
             }
             double amount = Math.min(bleed.stacks * config.bleed_damage_per_stack, bleed.budget);
@@ -133,9 +140,12 @@ public final class BleedManager {
         int victims = 0;
         double damage = 0;
         int stacks = 0;
-        Iterator<Map.Entry<UUID, Bleed>> it = active.entrySet().iterator();
-        while (it.hasNext()) {
-            Bleed bleed = it.next().getValue();
+        // Same snapshot rule as onTick: the burst's hit can kill, and the death clears the bleed.
+        for (Map.Entry<UUID, Bleed> entry : List.copyOf(active.entrySet())) {
+            Bleed bleed = entry.getValue();
+            if (active.get(entry.getKey()) != bleed) {
+                continue;
+            }
             LivingEntity victim = bleed.victim;
             if (!owner.getUUID().equals(bleed.owner) || victim == null || !victim.isAlive()
                     || victim.isRemoved() || victim.level() != owner.level()
@@ -143,7 +153,7 @@ public final class BleedManager {
                 continue;
             }
             double amount = Math.max(0, bleed.budget);
-            it.remove();
+            active.remove(entry.getKey());
             if (amount <= 0) {
                 continue;
             }
