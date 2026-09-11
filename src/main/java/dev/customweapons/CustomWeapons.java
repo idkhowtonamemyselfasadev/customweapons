@@ -155,8 +155,17 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
         UseBlockCallback.EVENT.register(this::onUseBlock);
         ServerLivingEntityEvents.ALLOW_DAMAGE.register(this::allowDamage);
         ServerLivingEntityEvents.AFTER_DAMAGE.register(this::afterDamage);
-        ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> BLEED.clear(entity.getUUID()));
+        ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
+            BLEED.clear(entity.getUUID());
+            if (source.getEntity() instanceof ServerPlayer killer && killer != entity) {
+                CustomWeapon weapon = Weapons.of(killer.getMainHandItem(), config);
+                if (weapon != null) {
+                    weapon.onKill(killer, entity, config);
+                }
+            }
+        });
         ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
+            EFFECTS.onEntityLoad(entity);
             if (entity instanceof AbstractArrow arrow) {
                 onArrowFired(arrow, level);
             } else if (config.protect_dropped_weapons && entity instanceof ItemEntity item
@@ -173,6 +182,9 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
             ANIMATIONS.forget(player.getUUID());
             STATE.forget(player.getUUID());
             BLEED.clear(player.getUUID());
+            for (CustomWeapon weapon : Weapons.ALL) {
+                weapon.forget(player.getUUID());
+            }
         });
         CommandRegistrationCallback.EVENT.register((dispatcher, registry, environment) ->
                 register(dispatcher));
@@ -195,6 +207,9 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
         BLEED.onTick(server, config);
         SHOCK.onTick();
         STUNS.onTick();
+        for (CustomWeapon weapon : Weapons.ALL) {
+            weapon.onTick(server, config);
+        }
         PROJECTILES.onTick(server, config);
         ANIMATIONS.onTick(server);
         EFFECTS.onTick(server);

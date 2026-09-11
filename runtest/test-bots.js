@@ -572,7 +572,8 @@ async function main() {
         }
         const endRods = await endRodsDone;
         await sleep(Math.max(0, 2500 - (Date.now() - fxAt)));
-        const drop = before - dummy.health;
+        // The stun probe lands one empty-hand hit of its own; that is not the arrow's.
+        const drop = before - dummy.health - ((probed && probed.meleeDrop) || 0);
         const fx = fxSince(dummy, fxAt, 1500, 2000);
         console.log(`   Dummy ${before} -> ${dummy.health} (-${drop.toFixed(1)}); Archer bar `
             + JSON.stringify(archer.actionBars));
@@ -594,7 +595,13 @@ async function main() {
       await sleep(150);
       const pinned = dummy.entity.position.clone();
       const slowId = MC_DATA.effectsByName.Slowness.id;
-      const result = { pinned, forcedMoves: 0, maxDrift: NaN, endDrift: NaN, serverPinned: NaN, walked: NaN };
+      const result = { pinned, forcedMoves: 0, maxDrift: NaN, endDrift: NaN, serverPinned: NaN, walked: NaN,
+        meleeDrop: 0, meleeKick: NaN };
+      // For the knockback probe at the end of the stun: Smith, empty-handed (an Aegis Hammer
+      // hit would kill a Dummy on 4 hp), two blocks behind Dummy on the Archer side. Put
+      // there now so that the hit itself is a single packet later.
+      cmd('clear Smith');
+      cmd('tp Smith 3 -59 2');
 
       const told = await waitUntil(() => dummy.actionBars.some((m) => m.trim() === 'Stunned'), 500);
       check(told, 'Dummy is told "Stunned" on its action bar',
@@ -638,6 +645,37 @@ async function main() {
           `max ${maxDrift.toFixed(3)}, end ${endDrift.toFixed(3)}`);
       check(result.serverPinned === 1,
           'the server also has Dummy within 0.5 of the spot mid-stun', `count ${result.serverPinned}`);
+
+      // The shock's stun is not rigid: a melee hit on the stunned Dummy still carries its
+      // knockback. The server sends a stunned player its (zeroed) motion every tick and
+      // snaps it back the tick after, so the position proves nothing either way; what the
+      // vanilla client receives for the hit is a non-zero entity_velocity. Done after the
+      // walk so the knockback cannot count against the drift measured above.
+      const smithSeesDummy = smith.players['Dummy'] && smith.players['Dummy'].entity;
+      if (smithSeesDummy) {
+        await smith.lookAt(smithSeesDummy.position.offset(0, 1.2, 0), true);
+        dummy.velocityPackets.length = 0;
+        const meleeBefore = dummy.health;
+        const meleeSentAt = Date.now() - hitAt;
+        smith.attack(smithSeesDummy);
+        const meleeLanded = await waitUntil(() => dummy.health < meleeBefore, 400);
+        await sleep(150);
+        const kicks = dummy.velocityPackets.map((p) => Math.hypot(p.velocity.x, p.velocity.y, p.velocity.z));
+        result.meleeKick = kicks.length ? Math.max(...kicks) : 0;
+        result.meleeDrop = meleeBefore - dummy.health;
+        console.log(`   empty-hand hit on the stunned Dummy ${meleeSentAt} ms after the shock`
+            + ` (${meleeSentAt < 1900 ? 'inside' : 'AFTER'} the 2 s stun): Dummy ${meleeBefore} -> ${dummy.health};`
+            + ` ${kicks.length} velocity packets, strongest ${result.meleeKick.toFixed(3)} blocks/tick`
+            + ` ${JSON.stringify(dummy.velocityPackets.map((p) => p.velocity).slice(-3))}`);
+        check(meleeLanded, 'the melee hit on the stunned Dummy lands', `${meleeBefore} -> ${dummy.health}`);
+        check(result.meleeKick > 0.1,
+            'the shock stun is not rigid: a melee hit on the stunned Dummy still sends knockback (velocity > 0.1)',
+            `${result.meleeKick.toFixed(3)} blocks/tick`);
+      } else {
+        fail('Smith can see Dummy for the knockback probe');
+      }
+      // Back out of chain range before any further shot.
+      cmd('tp Smith 0 -59 -12');
 
       // 40 ticks = 2 s. At 2.5 s the effect and the pin are both gone.
       await sleep(Math.max(0, hitAt + 2500 - Date.now()));
@@ -874,6 +912,7 @@ async function main() {
     const logOffset = fs.readFileSync(RUN + '/test.log', 'utf8').length;
     smith.actionBars.length = 0;
     const missBefore = dummy.health;
+    const missFiredAt = Date.now();
     smith.activateItem();
     const missLogged = await waitUntil(() =>
         /ABILITY frostbeam player=Smith victim=miss/.test(fs.readFileSync(RUN + '/test.log', 'utf8').slice(logOffset)), 1500);
@@ -886,6 +925,245 @@ async function main() {
     check(dummy.health === missBefore, 'the missed beam changes nothing on Dummy', `${missBefore} -> ${dummy.health}`);
     check(smith.actionBars.some((m) => m.trim() === 'Ice Beam'), 'a missed beam still reports "Ice Beam"',
         JSON.stringify(smith.actionBars));
+
+    // ---- Rigid freeze: a target held by the Ice Beam takes no knockback at all, not even
+    // from the killing blow (KnockbackMixin cancels it while Stuns.isRigid). Section 7 is
+    // the contrast: the shock's stun still lets a hit kick.
+    console.log('   -- Ice Beam rigid freeze');
+    const kickOf = (bot) => {
+      const k = bot.velocityPackets.map((p) => Math.hypot(p.velocity.x, p.velocity.y, p.velocity.z));
+      return k.length ? Math.max(...k) : 0;
+    };
+    // (a) Dummy, beamed from 6 blocks and then hit twice with the Frostbrand inside the 3 s
+    // freeze. Resistance III keeps two sword hits and a possible shatter survivable;
+    // knockback pays no attention to resistance. Both views are measured: Dummy's own
+    // client (which is what would apply a knockback velocity) and Dummy as Smith sees it.
+    cmd('effect give Dummy minecraft:resistance 120 2 true');
+    cmd('tp Smith 0 -59 0');
+    cmd('tp Dummy 6 -59 0');
+    await healDummy();
+    await sleep(Math.max(0, missFiredAt + 8600 - Date.now()));   // the sky shot's 8 s cooldown
+    const rigidTarget = (smith.players['Dummy'] && smith.players['Dummy'].entity) || beamTarget;
+    await smith.lookAt(rigidTarget.position.offset(0, 1.2, 0), true);
+    await sleep(300);
+    dummy.actionBars.length = 0;
+    smith.actionBars.length = 0;
+    const rigidBefore = dummy.health;
+    smith.activateItem();
+    const rigidLanded = await waitUntil(() => dummy.health < rigidBefore, 1000);
+    const rigidHitAt = Date.now();
+    check(rigidLanded, 'the ice beam hits Dummy again for the rigid-freeze probe', `${rigidBefore} -> ${dummy.health}`);
+    await sleep(150);
+    const rigidAt = dummy.entity.position.clone();
+    const rigidSeen = rigidTarget.position.clone();
+    // Smith steps in to two blocks and swings twice, 600 ms apart, ~0.7 s and ~1.3 s into
+    // the freeze, sampling both positions every 25 ms until ~2.2 s.
+    cmd('tp Smith 4 -59 0');
+    await sleep(500);
+    await smith.lookAt(rigidTarget.position.offset(0, 1.2, 0), true);
+    dummy.velocityPackets.length = 0;
+    const rigidMovesBefore = dummy.forcedMoves;
+    const rigidStart = Date.now();
+    const rigidSwings = [];
+    let rigidMaxOwn = 0;
+    let rigidMaxSeen = 0;
+    while (Date.now() - rigidStart < 1600) {
+      const t = Date.now() - rigidStart;
+      if (rigidSwings.length < 2 && t >= rigidSwings.length * 600) {
+        rigidSwings.push({ t, health: dummy.health });
+        smith.attack(rigidTarget);
+      }
+      await sleep(25);
+      rigidMaxOwn = Math.max(rigidMaxOwn, beamDist(dummy.entity.position, rigidAt));
+      rigidMaxSeen = Math.max(rigidMaxSeen, beamDist(rigidTarget.position, rigidSeen));
+    }
+    const rigidHealthAfter = dummy.health;
+    const rigidDrops = rigidSwings.map((s, i) => s.health - (i + 1 < rigidSwings.length ? rigidSwings[i + 1].health : rigidHealthAfter));
+    const rigidKick = kickOf(dummy);
+    console.log(`   frozen at ${rigidAt} (Smith sees ${rigidSeen}); two Frostbrand hits while frozen: `
+        + `health drops ${JSON.stringify(rigidDrops.map((d) => +d.toFixed(1)))}; `
+        + `max displacement own ${rigidMaxOwn.toFixed(3)}, seen by Smith ${rigidMaxSeen.toFixed(3)}; `
+        + `${dummy.forcedMoves - rigidMovesBefore} position packets; `
+        + `${dummy.velocityPackets.length} velocity packets, strongest ${rigidKick.toFixed(3)} blocks/tick, `
+        + `${(Date.now() - rigidHitAt) / 1000}s into the freeze`);
+    check(rigidDrops.length === 2 && rigidDrops.every((d) => d > 0),
+        'both Frostbrand hits on the frozen Dummy land', JSON.stringify(rigidDrops));
+    check(rigidMaxOwn <= 0.15 && rigidMaxSeen <= 0.15,
+        'a frozen Dummy takes no knockback: it stays within 0.15 of the frozen spot through two hits',
+        `own ${rigidMaxOwn.toFixed(3)}, seen ${rigidMaxSeen.toFixed(3)}`);
+    check(rigidKick <= 0.05,
+        'no knockback velocity reaches the frozen Dummy (every velocity packet is zero)',
+        `strongest ${rigidKick.toFixed(3)} blocks/tick over ${dummy.velocityPackets.length} packets`);
+
+    // Control: once the ice is gone (60 ticks) the same hit kicks Dummy away.
+    await sleep(Math.max(0, rigidHitAt + 3500 - Date.now()));
+    await smith.lookAt(rigidTarget.position.offset(0, 1.2, 0), true);
+    dummy.velocityPackets.length = 0;
+    const ctrlAt = dummy.entity.position.clone();
+    const ctrlSeen = rigidTarget.position.clone();
+    const ctrlBefore = dummy.health;
+    const ctrlStart = Date.now();
+    smith.attack(rigidTarget);
+    let ctrlMaxOwn = 0;
+    let ctrlMaxSeen = 0;
+    while (Date.now() - ctrlStart < 1000) {
+      await sleep(25);
+      ctrlMaxOwn = Math.max(ctrlMaxOwn, beamDist(dummy.entity.position, ctrlAt));
+      ctrlMaxSeen = Math.max(ctrlMaxSeen, beamDist(rigidTarget.position, ctrlSeen));
+    }
+    const ctrlKick = kickOf(dummy);
+    console.log(`   control hit after the thaw: Dummy ${ctrlBefore} -> ${dummy.health}; `
+        + `max displacement own ${ctrlMaxOwn.toFixed(3)}, seen by Smith ${ctrlMaxSeen.toFixed(3)}; `
+        + `${dummy.velocityPackets.length} velocity packets, strongest ${ctrlKick.toFixed(3)} blocks/tick`);
+    check(dummy.health < ctrlBefore, 'the control hit after the thaw lands', `${ctrlBefore} -> ${dummy.health}`);
+    check(ctrlMaxOwn > 0.3 || ctrlKick > 0.1,
+        'control: once the ice is gone the same hit knocks Dummy back (> 0.3 blocks or a velocity packet)',
+        `moved ${ctrlMaxOwn.toFixed(3)}, velocity ${ctrlKick.toFixed(3)}`);
+
+    // (b) A mob: a husk frozen by the beam and killed with one Frostbrand hit dies where it
+    // stood - the killing blow's knockback is cancelled too, so the body does not fly.
+    // 12 hp: the beam's 6.0 (magic, past the husk's 2 armour) leaves 6, one sword hit (8,
+    // 7.4 past the armour) ends it. Not NoAI: a NoAI mob never runs its travel step, so it
+    // neither falls nor slides from a knockback and would pass this for the wrong reason.
+    // Instead its movement speed is 0: it wants Smith, cannot take a step, and a knockback
+    // still carries it (the control below shows that).
+    cmd('tp Dummy 12 -59 12');
+    cmd('tp Smith 0 -59 0');
+    await sleep(Math.max(0, rigidHitAt + 8600 - Date.now()));
+    const huskSeen = (not) => Object.values(smith.entities).find((e) => e.name === 'husk' && e !== not);
+    // mineflayer's 1.21.11 tables never move a mob on the client (a summoned husk stays on
+    // its summon coordinate for good), so the husk is watched on the server: `data get
+    // entity <uuid> Pos` echoes "Husk has the following entity data: [x, y, z]" into
+    // test.log. By UUID, not @e: a selector skips a dying mob, and the corpse is the point.
+    // null once the server no longer has it (removed).
+    const HUSK_UUID = ['00000000-0000-0001-0000-000000000002', '00000000-0000-0001-0000-000000000003'];
+    const HUSK_NBT = ['UUID:[I;0,1,0,2]', 'UUID:[I;0,1,0,3]'].map((u) =>
+        `Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:movement_speed",base:0.0}],${u}`);
+    const huskPosOnServer = async (uuid) => {
+      const offset = fs.readFileSync(RUN + '/test.log', 'utf8').length;
+      cmd(`data get entity ${uuid} Pos`);
+      for (let i = 0; i < 10; i++) {
+        await sleep(50);
+        const tail = fs.readFileSync(RUN + '/test.log', 'utf8').slice(offset);
+        const m = tail.match(/Husk has the following entity data: \[(-?[\d.]+)d, (-?[\d.]+)d, (-?[\d.]+)d\]/);
+        if (m) return { x: +m[1], y: +m[2], z: +m[3] };
+        if (/No entity was found/.test(tail)) return null;
+      }
+      return null;
+    };
+    const fmt = (p) => p ? `(${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)})` : 'none';
+    const huskDeath = async (label, husk, uuid, stood) => {
+      let goneAt = 0;
+      const onGone = (e) => { if (e.id === husk.id) goneAt = Date.now(); };
+      smith.on('entityGone', onGone);
+      await smith.lookAt(husk.position.offset(0, 0.5, 0), true);
+      const hitAt = Date.now();
+      const hitFrom = smith.entity.position.clone();
+      smith.attack(husk);
+      // Server positions every ~60 ms until the server no longer has a husk (or 2.5 s).
+      const trace = [];
+      while (Date.now() - hitAt < 2500) {
+        const p = await huskPosOnServer(uuid);
+        if (!p) break;
+        trace.push({ t: Date.now() - hitAt, p, d: beamDist(p, stood) });
+      }
+      await waitUntil(() => goneAt > 0, 1500);
+      smith.removeListener('entityGone', onGone);
+      const maxDrift = trace.length ? Math.max(...trace.map((s) => s.d)) : NaN;
+      const last = trace.length ? trace[trace.length - 1] : null;
+      const drift = last ? last.d : NaN;
+      console.log(`   ${label}: hit from ${hitFrom} (${beamDist(hitFrom, stood).toFixed(2)} blocks); stood at ${fmt(stood)}, `
+          + `last on the server at ${fmt(last && last.p)} (${last ? last.t : '-'} ms): displacement ${drift.toFixed(3)}, `
+          + `max ${maxDrift.toFixed(3)} over ${trace.length} samples; client saw it removed `
+          + `${goneAt ? ((goneAt - hitAt) / 1000).toFixed(2) + 's' : 'NOT'} after the hit`);
+      console.log('   server trace (ms: displacement): ' + trace.map((s) => `${s.t}:${s.d.toFixed(2)}`).join(' '));
+      return { goneAt, drift, maxDrift, samples: trace.length };
+    };
+    cmd(`summon minecraft:husk 5.5 -59 0.5 {Health:12f,${HUSK_NBT[0]}}`);
+    await sleep(1000);
+    const husk = huskSeen(null);
+    check(!!husk, 'a husk stands 5 blocks ahead of Smith');
+    let huskBeamAt = Date.now();
+    if (husk) {
+      const huskStood = await huskPosOnServer(HUSK_UUID[0]);
+      await smith.lookAt(husk.position.offset(0, 1.0, 0), true);
+      await sleep(300);
+      const huskLogOffset = fs.readFileSync(RUN + '/test.log', 'utf8').length;
+      smith.actionBars.length = 0;
+      huskBeamAt = Date.now();
+      smith.activateItem();
+      const huskFrozen = await waitUntil(() =>
+          /ABILITY frostbeam player=Smith victim=Husk/.test(fs.readFileSync(RUN + '/test.log', 'utf8').slice(huskLogOffset)), 1500);
+      check(huskFrozen, 'the ice beam freezes the husk (logged victim=Husk)', JSON.stringify(smith.actionBars));
+      await sleep(150);
+      const huskFrozenAt = await huskPosOnServer(HUSK_UUID[0]);
+      console.log(`   husk stood at ${fmt(huskStood)}, frozen at ${fmt(huskFrozenAt)}`
+          + ` (${huskStood && huskFrozenAt ? beamDist(huskStood, huskFrozenAt).toFixed(3) : '?'} apart)`);
+      check(!!huskFrozenAt, 'the server still has the husk after the beam');
+      cmd('tp Smith 3 -59 0');
+      await sleep(500);
+      const frozenKill = await huskDeath('frozen husk, one Frostbrand hit', husk, HUSK_UUID[0], huskFrozenAt || huskStood);
+      check(frozenKill.goneAt > 0, 'one Frostbrand hit kills the frozen husk (gone within 2.5 s)');
+      check(frozenKill.samples > 0 && frozenKill.drift <= 0.3 && frozenKill.maxDrift <= 0.3,
+          'the frozen husk dies where it stood: the killing blow moves it by no more than 0.3',
+          `last ${frozenKill.drift.toFixed(3)}, max ${frozenKill.maxDrift.toFixed(3)}`);
+
+      // Control: an unfrozen husk killed the same way is knocked off its spot.
+      cmd(`summon minecraft:husk 5.5 -59 0.5 {Health:4f,${HUSK_NBT[1]}}`);
+      await sleep(1000);
+      const husk2 = huskSeen(husk);
+      check(!!husk2, 'a second, unfrozen husk stands in the same place');
+      if (husk2) {
+        const stood2 = await huskPosOnServer(HUSK_UUID[1]);
+        check(!!stood2, 'the server has the second husk');
+        const plainKill = await huskDeath('unfrozen husk, one Frostbrand hit', husk2, HUSK_UUID[1], stood2 || { x: 5.5, y: -59, z: 0.5 });
+        check(plainKill.goneAt > 0, 'one Frostbrand hit kills the unfrozen husk too');
+        check(plainKill.maxDrift > 0.3,
+            'control: the unfrozen husk is knocked more than 0.3 by the killing blow',
+            `max ${plainKill.maxDrift.toFixed(3)}`);
+      }
+    }
+
+    // ---- The jar's default: frost_beam_cooldown_ticks is 600 (30 s). The harness config
+    // pins it to 160 so the timings above hold; drop the key, reload, and a freshly given
+    // Frostbrand must describe a 30 s cooldown in its lore, and a second use back to back
+    // must be refused with 20+ s left. Then the key goes back.
+    console.log('   -- Ice Beam default cooldown (config key removed, jar default)');
+    const cfgPath = RUN + '/config/customweapons.json';
+    const cfgWithKey = fs.readFileSync(cfgPath, 'utf8');
+    check(/"frost_beam_cooldown_ticks": 160,/.test(cfgWithKey), 'the harness config pins frost_beam_cooldown_ticks to 160');
+    fs.writeFileSync(cfgPath, cfgWithKey.replace(/\n\s*"frost_beam_cooldown_ticks": 160,/, ''));
+    cmd('customweapon reload');
+    await sleep(2000);
+    cmd('clear Smith');
+    cmd('customweapon give Smith frostbrand');
+    await sleep(1500);
+    const freshFrostbrand = smith.inventory.items().find((i) => i.name === 'iron_sword');
+    const freshLore = freshFrostbrand ? JSON.stringify((freshFrostbrand.components || []).find((c) => c.type === 'lore') || null) : 'no sword';
+    const loreLines = (freshLore.match(/"value":"[^"]*"/g) || []).map((s) => s.slice(9, -1))
+        .filter((s) => /cooldown/i.test(s));
+    console.log('   fresh Frostbrand lore lines mentioning a cooldown: ' + JSON.stringify(loreLines));
+    check(/cooldown 30s/.test(freshLore),
+        'a Frostbrand given on the jar default reads "cooldown 30s" in its Ice Beam lore line',
+        loreLines.join(' | ') || freshLore.slice(0, 200));
+    if (freshFrostbrand) await equipByName(smith, 'iron_sword');
+    await sleep(Math.max(0, huskBeamAt + 8600 - Date.now()));
+    await smith.look(smith.entity.yaw, Math.PI / 3, true);
+    await sleep(300);
+    smith.actionBars.length = 0;
+    smith.activateItem();
+    await sleep(700);
+    smith.activateItem();
+    await sleep(800);
+    const defaultNote = smith.actionBars.map((m) => m.trim()).find((m) => /^Ice Beam\s+[\d.]+s$/.test(m));
+    const defaultLeft = defaultNote ? parseFloat(defaultNote.replace(/^Ice Beam\s+/, '')) : NaN;
+    console.log(`   two uses back to back on the default: Smith bar ${JSON.stringify(smith.actionBars)}`);
+    check(defaultLeft >= 20,
+        'on the jar default a second beam is refused with 20+ s left (600 ticks = 30 s)',
+        defaultNote || 'no "Ice Beam  Ns" note');
+    fs.writeFileSync(cfgPath, cfgWithKey);
+    cmd('customweapon reload');
+    await sleep(2000);
   }
   // Resistance III back on for the rest of the section (the Hellfire blast on the head).
   cmd('effect give Dummy minecraft:resistance 120 2 true');
@@ -1059,6 +1337,307 @@ async function main() {
   await healDummy();
   console.log(`   section 8 took ${((Date.now() - section8Start) / 1000).toFixed(1)}s`);
   console.log(`   full draws fired with the shock ready: ${fullDraws}`);
+
+  // ------------------------------------- 8b. the v1.4 weapons and abilities
+  console.log('\n== 8b. Dawnbreaker, Voidreaper, Starfall, Exsanguinate, Stagger ==');
+  const dist3 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+  const barHas = (bot, re) => bot.actionBars.some((m) => re.test(m.trim()));
+  cmd('effect clear Dummy');
+  cmd('effect clear Smith');
+  cmd('clear Dummy');
+  cmd('clear Smith');
+  cmd('time set day');
+  cmd('tp Smith 0 -59 0');
+  cmd('tp Dummy 2 -59 0');
+  await healDummy();
+
+  // ---- Dawnbreaker: a hit burns and, by day, lands +2.0 on top; the Sunstrike falls a
+  // second after the mark on whatever the wielder looked at.
+  console.log('   -- Dawnbreaker');
+  cmd('customweapon give Smith dawnbreaker');
+  await sleep(800);
+  const dawnbreaker = await equipByName(smith, 'golden_sword');
+  console.log('   ' + describe(dawnbreaker));
+  check(/Dawnbreaker/.test(JSON.stringify(dawnbreaker)), 'the Dawnbreaker reaches the client named');
+  {
+    // mineflayer's 1.21.11 component tables mis-read half the ids, so ask the server:
+    // `data get` echoes the component into test.log, or "Found no elements" if it is absent.
+    const offset = fs.readFileSync(RUN + '/test.log', 'utf8').length;
+    cmd('data get entity Smith SelectedItem.components."minecraft:unbreakable"');
+    await sleep(600);
+    const tail = fs.readFileSync(RUN + '/test.log', 'utf8').slice(offset);
+    check(/Smith has the following entity data: \{\}/.test(tail) && !/Found no elements/.test(tail),
+        'the Dawnbreaker is unbreakable (server-side component)', tail.trim().split('\n').slice(-1)[0] || '(no echo)');
+  }
+  let sunTarget = smith.players['Dummy'] && smith.players['Dummy'].entity;
+  if (!sunTarget) {
+    fail('Smith can see Dummy for the Dawnbreaker');
+  } else {
+    smith.actionBars.length = 0;
+    const solarBefore = dummy.health;
+    await smith.lookAt(sunTarget.position.offset(0, 1.2, 0), true);
+    await sleep(800);
+    smith.attack(sunTarget);
+    await waitUntil(() => dummy.health < solarBefore, 1000);
+    await sleep(400);
+    const solarDrop = solarBefore - dummy.health;
+    console.log(`   one Dawnbreaker hit: Dummy ${solarBefore} -> ${dummy.health} (-${solarDrop.toFixed(1)}); `
+        + `Smith bar ${JSON.stringify(smith.actionBars)}; Dummy on fire flag ${(dummy.entity.metadata || [])[0]}`);
+    check(solarDrop >= 10 && solarDrop <= 15, 'a daytime hit lands 9.0 + 2.0 Solar Brand (10-15 with the burn)',
+        `${solarDrop.toFixed(1)} hp`);
+    check(barHas(smith, /^Solar Brand\s+\+2\.0$/), 'Smith sees "Solar Brand  +2.0"', smith.actionBars.slice(-1)[0] || '');
+
+    // Sunstrike from six blocks: mark, one second, pillar.
+    cmd('effect clear Dummy');
+    cmd('tp Dummy 6 -59 0');
+    await healDummy();
+    await sleep(600);
+    sunTarget = smith.players['Dummy'] && smith.players['Dummy'].entity;
+    await smith.lookAt(sunTarget.position.offset(0, 1.0, 0), true);
+    await sleep(300);
+    smith.actionBars.length = 0;
+    const strikeBefore = dummy.health;
+    const strikeAt = Date.now();
+    smith.activateItem();
+    await sleep(400);
+    check(barHas(smith, /^Sunstrike$/), 'the mark reports "Sunstrike" at once', JSON.stringify(smith.actionBars));
+    check(dummy.health === strikeBefore, 'nothing lands during the one-second telegraph', `${strikeBefore} -> ${dummy.health}`);
+    const struck = await waitUntil(() => dummy.health < strikeBefore, 2000);
+    const strikeLanded = Date.now() - strikeAt;
+    await sleep(500);
+    const strikeDrop = strikeBefore - dummy.health;
+    console.log(`   Sunstrike: Dummy ${strikeBefore} -> ${dummy.health} (-${strikeDrop.toFixed(1)}) after ${strikeLanded} ms; `
+        + `Smith bar ${JSON.stringify(smith.actionBars)}`);
+    check(struck && strikeLanded >= 800 && strikeLanded <= 2000, 'the pillar lands about a second after the mark', `${strikeLanded} ms`);
+    check(strikeDrop >= 8 && strikeDrop <= 13, 'the Sunstrike deals 9.0 (8-13 with the burn)', `${strikeDrop.toFixed(1)} hp`);
+    check(barHas(smith, /^Sunstrike\s+1 hit$/), 'Smith sees "Sunstrike  1 hit"', smith.actionBars.slice(-1)[0] || '');
+    const sunFx = fxSince(dummy, strikeAt, 2000, 3500);
+    console.log(`   sun_telegraph + sunstrike: Dummy was sent ${sunFx.spawned} block displays, ${sunFx.gone} removed within 3.5s`);
+    check(sunFx.spawned >= 8, 'the telegraph and the pillar spawn their displays (>= 8)', `${sunFx.spawned}`);
+    smith.actionBars.length = 0;
+    smith.activateItem();
+    await sleep(600);
+    check(barHas(smith, /^Sunstrike\s+[\d.]+s$/), 'a second Sunstrike inside the cooldown is refused with the time left',
+        JSON.stringify(smith.actionBars));
+  }
+
+  // ---- Voidreaper: the Rift puts the wielder behind the mark, the next hit is a backstab,
+  // every hit withers, and a kill feeds the wielder.
+  console.log('   -- Voidreaper');
+  cmd('clear Smith');
+  cmd('customweapon give Smith voidreaper');
+  cmd('effect clear Dummy');
+  cmd('tp Smith 0 -59 0');
+  cmd('tp Dummy 6 -59 0');
+  await healDummy();
+  await sleep(800);
+  const voidreaper = await equipByName(smith, 'netherite_hoe');
+  console.log('   ' + describe(voidreaper));
+  check(/Voidreaper/.test(JSON.stringify(voidreaper)), 'the Voidreaper reaches the client named');
+  let riftTarget = smith.players['Dummy'] && smith.players['Dummy'].entity;
+  if (!riftTarget) {
+    fail('Smith can see Dummy for the Rift');
+  } else {
+    await dummy.lookAt(dummy.entity.position.offset(10, 1.6, 0), true);   // Dummy faces +x; behind is -x
+    await smith.lookAt(riftTarget.position.offset(0, 1.2, 0), true);
+    await sleep(400);
+    smith.actionBars.length = 0;
+    const riftFrom = smith.entity.position.clone();
+    const movesBefore = smith.forcedMoves;
+    const riftAt = Date.now();
+    smith.activateItem();
+    const moved = await waitUntil(() => smith.forcedMoves > movesBefore, 1000);
+    await sleep(400);
+    const riftTo = smith.entity.position.clone();
+    const gap = dist3(riftTo, dummy.entity.position);
+    console.log(`   Rift: Smith ${riftFrom} -> ${riftTo}; ${gap.toFixed(2)} from Dummy at ${dummy.entity.position}; `
+        + `Smith bar ${JSON.stringify(smith.actionBars)}`);
+    check(moved && dist3(riftFrom, riftTo) > 3, 'the Rift moves Smith (a teleport, > 3 blocks)', `${dist3(riftFrom, riftTo).toFixed(2)}`);
+    check(gap <= 2.3, 'Smith lands right next to Dummy (<= 2.3 blocks)', `${gap.toFixed(2)}`);
+    check(riftTo.x < dummy.entity.position.x - 0.8, 'and behind it: Dummy faces +x, Smith is on the -x side',
+        `Smith x ${riftTo.x.toFixed(2)}, Dummy x ${dummy.entity.position.x.toFixed(2)}`);
+    check(barHas(smith, /^Rift\s+behind Dummy$/), 'Smith sees "Rift  behind Dummy"', smith.actionBars.slice(-1)[0] || '');
+    const riftFx = fxSince(dummy, riftAt, 1000, 2000);
+    console.log(`   rift_open x2: Dummy was sent ${riftFx.spawned} block displays, ${riftFx.gone} removed within 2s`);
+    check(riftFx.spawned >= 8, 'both rift tears spawn their displays (>= 8)', `${riftFx.spawned}`);
+
+    // The backstab: one hit inside the two-second window.
+    riftTarget = smith.players['Dummy'] && smith.players['Dummy'].entity;
+    await smith.lookAt(riftTarget.position.offset(0, 1.2, 0), true);
+    smith.actionBars.length = 0;
+    const stabBefore = dummy.health;
+    smith.attack(riftTarget);
+    await waitUntil(() => dummy.health < stabBefore, 1000);
+    await sleep(500);
+    const stabDrop = stabBefore - dummy.health;
+    const witherId = MC_DATA.effectsByName.Wither.id;
+    const withered = (dummy.entity.effects || {})[witherId];
+    console.log(`   backstab: Dummy ${stabBefore} -> ${dummy.health} (-${stabDrop.toFixed(1)}); Smith bar `
+        + `${JSON.stringify(smith.actionBars)}; wither on the client: ${JSON.stringify(withered || null)}`);
+    check(stabDrop >= 15 && stabDrop <= 20, 'the backstab lands 10.0 + 6.0 (15-20 with the wither tick)', `${stabDrop.toFixed(1)} hp`);
+    check(barHas(smith, /^Backstab\s+\+6\.0$/), 'Smith sees "Backstab  +6.0"', smith.actionBars.slice(-1)[0] || '');
+    if (Object.keys(dummy.entity.effects || {}).length === 0) {
+      console.log('   (skip) mineflayer reported no effects on Dummy; wither not checked');
+    } else {
+      check(!!withered, 'Dummy carries Wither after the hit', JSON.stringify(dummy.entity.effects));
+    }
+    smith.actionBars.length = 0;
+    const plainBefore = dummy.health;
+    await sleep(700);
+    smith.attack(riftTarget);
+    await waitUntil(() => dummy.health < plainBefore, 1000);
+    await sleep(400);
+    check(!barHas(smith, /^Backstab/), 'the backstab is spent: the next hit is a plain one', JSON.stringify(smith.actionBars));
+
+    // Soul Harvest: a one-hit kill heals Smith 4.0. Smith is still where the Rift put them,
+    // four blocks from where the zombie appears: back to the origin first, or the swing
+    // never reaches it.
+    cmd('tp Smith 0 -59 0');
+    cmd('damage Smith 10 minecraft:generic');
+    cmd('summon minecraft:zombie 1 -59 2 {NoAI:1b,Health:1f,Silent:1b}');
+    await sleep(1200);
+    const zombie = Object.values(smith.entities).find((e) => e.name === 'zombie');
+    if (!zombie) {
+      fail('a zombie was summoned next to Smith for the harvest');
+    } else {
+      const hpBefore = smith.health;
+      smith.actionBars.length = 0;
+      await smith.lookAt(zombie.position.offset(0, 1.0, 0), true);
+      await sleep(300);
+      smith.attack(zombie);
+      const fed = await waitUntil(() => smith.health > hpBefore, 1500);
+      await sleep(300);
+      console.log(`   harvest: Smith ${hpBefore} -> ${smith.health}; Smith bar ${JSON.stringify(smith.actionBars)}`);
+      check(fed && smith.health - hpBefore >= 3.5, 'the kill heals Smith 4.0 (Soul Harvest)', `${(smith.health - hpBefore).toFixed(1)}`);
+      check(barHas(smith, /^Soul Harvest\s+\+4\.0$/), 'Smith sees "Soul Harvest  +4.0"', smith.actionBars.slice(-1)[0] || '');
+    }
+    cmd('kill @e[type=minecraft:zombie]');
+  }
+
+  // ---- Starfall: the Comet launches, and landing while falling as a comet is the impact.
+  console.log('   -- Starfall');
+  cmd('clear Smith');
+  cmd('customweapon give Smith starfall');
+  cmd('effect clear Dummy');
+  cmd('effect clear Smith');
+  cmd('tp Smith 0 -59 0');
+  cmd('tp Dummy 2 -59 0');
+  await healDummy();
+  await sleep(800);
+  const starfall = await equipByName(smith, 'mace');
+  console.log('   ' + describe(starfall));
+  check(/Starfall/.test(JSON.stringify(starfall)), 'the Starfall reaches the client named');
+  {
+    smith.actionBars.length = 0;
+    smith.velocityPackets.length = 0;
+    const cometAt = Date.now();
+    const impactBefore = dummy.health;
+    smith.activateItem();
+    await sleep(300);
+    const launch = smith.velocityPackets[smith.velocityPackets.length - 1];
+    console.log(`   Comet: velocity packets ${smith.velocityPackets.length}, last ${JSON.stringify(launch || null)}; `
+        + `Smith bar ${JSON.stringify(smith.actionBars)}`);
+    check(!!launch && launch.velocity && launch.velocity.y > 0.5, 'the Comet sends an upward velocity (y > 0.5 blocks/tick)', launch ? JSON.stringify(launch.velocity) : 'no packet');
+    check(barHas(smith, /^Comet$/), 'Smith sees "Comet"', smith.actionBars.slice(-1)[0] || '');
+    // The headless bot ignores the launch, so the fall is a jump: airborne, then down.
+    smith.setControlState('jump', true);
+    await sleep(150);
+    smith.setControlState('jump', false);
+    const impacted = await waitUntil(() => dummy.health < impactBefore, 2500);
+    await sleep(500);
+    const impactDrop = impactBefore - dummy.health;
+    console.log(`   Impact: Dummy ${impactBefore} -> ${dummy.health} (-${impactDrop.toFixed(1)}); Smith bar ${JSON.stringify(smith.actionBars)}; `
+        + `Dummy velocity packets ${dummy.velocityPackets.length}`);
+    check(impacted && impactDrop >= 7 && impactDrop <= 11, 'landing deals the 8.0 impact to Dummy two blocks away (7-11 with the burn)',
+        `${impactDrop.toFixed(1)} hp`);
+    check(barHas(smith, /^Impact\s+1 hit$/), 'Smith sees "Impact  1 hit"', smith.actionBars.slice(-1)[0] || '');
+    const meteorFx = fxSince(dummy, cometAt, 3000, 4000);
+    console.log(`   comet_launch + meteor_impact: Dummy was sent ${meteorFx.spawned} block displays, ${meteorFx.gone} removed within 4s`);
+    check(meteorFx.spawned >= 12, 'the launch and the impact spawn their displays (>= 12)', `${meteorFx.spawned}`);
+    smith.actionBars.length = 0;
+    smith.activateItem();
+    await sleep(500);
+    check(barHas(smith, /^Comet\s+[\d.]+s$/), 'a second Comet inside the cooldown is refused with the time left',
+        JSON.stringify(smith.actionBars));
+  }
+
+  // ---- Bloodletter Exsanguinate: bursts the bleeds the wielder owns nearby.
+  console.log('   -- Exsanguinate');
+  cmd('clear Smith');
+  cmd('customweapon give Smith bloodletter');
+  cmd('effect clear Dummy');
+  cmd('tp Smith 0 -59 0');
+  cmd('tp Dummy 2 -59 0');
+  await healDummy();
+  await sleep(800);
+  await equipByName(smith, 'netherite_sword');
+  const bleedTarget = smith.players['Dummy'] && smith.players['Dummy'].entity;
+  if (!bleedTarget) {
+    fail('Smith can see Dummy for the Exsanguinate');
+  } else {
+    smith.actionBars.length = 0;
+    smith.activateItem();
+    await sleep(500);
+    check(barHas(smith, /^Exsanguinate\s+nothing bleeding$/), 'with nothing bleeding it says so and costs nothing',
+        JSON.stringify(smith.actionBars));
+    await smith.lookAt(bleedTarget.position.offset(0, 1.2, 0), true);
+    for (let i = 0; i < 2; i++) { smith.attack(bleedTarget); await sleep(600); }
+    await sleep(200);
+    smith.actionBars.length = 0;
+    const burstBefore = dummy.health;
+    const burstAt = Date.now();
+    smith.activateItem();
+    const burst = await waitUntil(() => dummy.health < burstBefore - 4, 800);
+    await sleep(400);
+    const burstDrop = burstBefore - dummy.health;
+    console.log(`   Exsanguinate: Dummy ${burstBefore} -> ${dummy.health} (-${burstDrop.toFixed(1)}) ; Smith bar ${JSON.stringify(smith.actionBars)}`);
+    check(burst && burstDrop >= 5, 'the burst lands the rest of the bleed at once (>= 5 within 0.8 s)', `${burstDrop.toFixed(1)} hp`);
+    check(barHas(smith, /^Exsanguinate\s+1 burst, \+4\.0$/), 'Smith sees "Exsanguinate  1 burst, +4.0" (two stacks)',
+        smith.actionBars.slice(-1)[0] || '');
+    const burstFx = fxSince(dummy, burstAt, 1000, 2000);
+    console.log(`   blood_burst: Dummy was sent ${burstFx.spawned} block displays, ${burstFx.gone} removed within 2s`);
+    check(burstFx.spawned >= 4, 'the burst spawns its displays (>= 4)', `${burstFx.spawned}`);
+    await sleep(1200);
+    const afterBurst = dummy.health;
+    await sleep(1200);
+    check(dummy.health === afterBurst, 'the bleed is over after the burst (no more ticks)', `${afterBurst} -> ${dummy.health}`);
+  }
+
+  // ---- Aegis Hammer Stagger: the third quick hit stuns for a second.
+  console.log('   -- Stagger');
+  cmd('clear Smith');
+  cmd('customweapon give Smith aegis_hammer');
+  cmd('effect clear Dummy');
+  cmd('tp Smith 0 -59 0');
+  cmd('tp Dummy 2 -59 0');
+  await healDummy();
+  await sleep(800);
+  await equipByName(smith, 'netherite_axe');
+  const staggerTarget = smith.players['Dummy'] && smith.players['Dummy'].entity;
+  if (!staggerTarget) {
+    fail('Smith can see Dummy for the Stagger');
+  } else {
+    await smith.lookAt(staggerTarget.position.offset(0, 1.2, 0), true);
+    smith.actionBars.length = 0;
+    dummy.actionBars.length = 0;
+    for (let i = 0; i < 3; i++) {
+      const h = dummy.health;
+      smith.attack(staggerTarget);
+      await waitUntil(() => dummy.health < h, 800);
+      if (i < 2) {
+        await sleep(200);
+        check(!barHas(dummy, /^Staggered$/), `hit ${i + 1} of 3 does not stagger`, JSON.stringify(dummy.actionBars));
+        await sleep(500);
+      }
+    }
+    const staggered = await waitUntil(() => barHas(dummy, /^Staggered$/), 800);
+    console.log(`   Stagger: Smith bar ${JSON.stringify(smith.actionBars)}; Dummy bar ${JSON.stringify(dummy.actionBars)}`);
+    check(staggered, 'the third hit staggers: Dummy is told "Staggered"', JSON.stringify(dummy.actionBars.slice(-2)));
+    check(barHas(smith, /^Stagger$/), 'Smith sees "Stagger"', JSON.stringify(smith.actionBars.slice(-2)));
+    cmd('effect clear Dummy');
+  }
+  cmd('clear Smith');
+  await sleep(600);
 
   // ------------------------------------------------------------- 9. SMP rules
   console.log('\n== 9. one of each weapon on the world ==');

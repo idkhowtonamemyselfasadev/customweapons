@@ -6,7 +6,8 @@
   "mixins": [
     "ResourcePackResponseMixin",
     "DisplayInvoker",
-    "BlockDisplayInvoker"
+    "BlockDisplayInvoker",
+    "KnockbackMixin"
   ],
   "injectors": {
     "defaultRequire": 1

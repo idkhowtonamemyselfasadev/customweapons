@@ -21,7 +21,8 @@ import java.util.List;
  */
 public final class Stuns {
 
-    private record Stun(LivingEntity victim, Vec3 at, long until) {
+    /** {@code rigid}: held so hard that hits do not move it either - the ice, not the shock. */
+    private record Stun(LivingEntity victim, Vec3 at, long until, boolean rigid) {
     }
 
     private final List<Stun> stunned = new ArrayList<>();
@@ -32,11 +33,15 @@ public final class Stuns {
     }
 
     public void stun(LivingEntity victim, int ticks, String label) {
+        stun(victim, ticks, label, false);
+    }
+
+    public void stun(LivingEntity victim, int ticks, String label, boolean rigid) {
         if (ticks <= 0) {
             return;
         }
         stunned.removeIf(s -> s.victim() == victim);
-        stunned.add(new Stun(victim, victim.position(), clock.tick() + ticks));
+        stunned.add(new Stun(victim, victim.position(), clock.tick() + ticks, rigid));
         victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, ticks, 6, false, false));
         victim.addEffect(new MobEffectInstance(MobEffects.MINING_FATIGUE, ticks, 2, false, false));
         victim.setDeltaMovement(Vec3.ZERO);
@@ -44,6 +49,17 @@ public final class Stuns {
         if (victim instanceof ServerPlayer player) {
             player.displayClientMessage(Component.literal(label).withStyle(ChatFormatting.AQUA), true);
         }
+    }
+
+    /** Whether this entity is frozen rigid: then it takes no knockback at all, even when killed. */
+    public boolean isRigid(LivingEntity entity) {
+        long now = clock.tick();
+        for (Stun stun : stunned) {
+            if (stun.victim() == entity && stun.rigid() && now < stun.until()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void onTick() {

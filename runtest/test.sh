@@ -47,6 +47,7 @@ cat > config/customweapons.json <<'JSON'
   "frostbrand_enabled": true,
   "frostbrand_attack_damage": 8.0,
   "frostbrand_attack_speed": 1.6,
+  "frost_beam_cooldown_ticks": 160,
   "frost_ticks_per_hit": 70,
   "frost_slowness_ticks": 40,
   "frost_slowness_amplifier": 1,
@@ -86,6 +87,12 @@ cat > config/customweapons.json <<'JSON'
 JSON
 
 mkfifo console.fifo
+# Always test the jar that was just built: a stale copy in mods/ once ran a whole suite
+# against last week's abilities and reported them missing.
+if [ -f "$RUN/../build/libs/customweapons-1.0.0.jar" ]; then
+    cp "$RUN/../build/libs/customweapons-1.0.0.jar" mods/customweapons-1.0.0.jar
+fi
+echo "== mod jar: $(ls -la mods/customweapons-1.0.0.jar | awk '{print $5, $6, $7, $8}') =="
 java -Xmx1500M -jar fabric-server-launch.jar nogui < console.fifo > test.log 2>&1 &
 SERVER_PID=$!
 # Hold the FIFO open, or the server sees EOF on stdin and shuts itself down.
@@ -159,9 +166,20 @@ assert_log "the shock stunned the target"          "ABILITY stun victim=Dummy ti
 assert_log "the shock executed a creeper"           "ABILITY shock hit victim=Creeper .* executed=true" -ge 1
 assert_log "frost stacked on a target"              "ABILITY frost"                   -ge 2
 assert_log "the shatter fired"                      "ABILITY shatter"                 -ge 1
-assert_log "the ice beam froze the target"          "ABILITY frostbeam player=Smith victim=Dummy" -ge 1
+assert_log "the ice beam froze the target (twice: the walk probe and the rigid-freeze probe)" \
+           "ABILITY frostbeam player=Smith victim=Dummy" -ge 2
+assert_log "the ice beam froze the husk"            "ABILITY frostbeam player=Smith victim=Husk"  -ge 1
 assert_log "the ice beam can miss"                  "ABILITY frostbeam player=Smith victim=miss"  -ge 1
 assert_log "the harpoon fired"                      "ABILITY harpoon"                 -ge 1
+assert_log "a daytime Dawnbreaker hit added the Solar Brand" "ABILITY solar player=Smith victim=Dummy bonus=2.0" -ge 1
+assert_log "the Sunstrike landed on Dummy"          "ABILITY sunstrike player=Smith .* hits=1" -ge 1
+assert_log "the Rift fired on Dummy"                "ABILITY rift player=Smith victim=Dummy"  -ge 1
+assert_log "the backstab landed"                    "ABILITY backstab player=Smith victim=Dummy bonus=6.0" -ge 1
+assert_log "the Soul Harvest fed the wielder"       "ABILITY harvest player=Smith victim=Zombie heal=4.0" -ge 1
+assert_log "the Comet launched"                     "ABILITY comet player=Smith"             -ge 1
+assert_log "the landing was the impact and hit Dummy" "ABILITY impact player=Smith hits=1 .* struck=ground" -ge 1
+assert_log "the Exsanguinate burst one bleed"       "ABILITY exsanguinate player=Smith victims=1" -ge 1
+assert_log "the Stagger stunned Dummy"              "ABILITY stagger player=Smith victim=Dummy" -ge 1
 assert_log "a Hellfire bolt was armed"              "ABILITY hellfire arm"            -ge 1
 assert_log "the Hellfire bolt exploded"             "ABILITY hellfire explode"        -ge 1
 assert_log "the one-legendary rule dropped the second weapon, keeping the first" \
@@ -170,12 +188,15 @@ assert_log "the altar forged a weapon"              "ALTAR forge .* weapon=blood
 assert_log "altars generate in newly generated chunks" "Weapon altar placed"           -ge 1
 # World effects: the keyframes in effects.json parse into the records at boot, and the
 # block displays they play never raise from the tick loop or the display mixins.
-assert_log "all ten world effects loaded from effects.json" "Loaded 10 world effects"     -ge 1
+assert_log "all eighteen world effects loaded from effects.json" "Loaded 18 world effects"     -ge 1
 assert_log "effects.json was readable"              "Could not read effects.json"     -eq 0
 assert_log "no exception out of the effects player or its display mixins" \
            "dev\.customweapons\.(Effects|mixin\.(Block)?DisplayInvoker)"            -eq 0
 assert_log "no leftover effect entities had to be swept on a fresh world" \
            "Removed [0-9]+ leftover effect entities"                          -eq 0
+# Rigid freeze: the knockback mixin and the stun list never raise from a hit or a kill.
+assert_log "no exception out of the knockback mixin or the stuns" \
+           "dev\.customweapons\.(mixin\.KnockbackMixin|Stuns)"                        -eq 0
 
 echo
 echo "--- bleed budget: the sum of one bleed's ticks must not exceed 12.0 ---"

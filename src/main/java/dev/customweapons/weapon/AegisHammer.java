@@ -75,7 +75,53 @@ public final class AegisHammer extends CustomWeapon {
                 Weapons.loreLine(String.format("Resistance for %.0fs to you",
                         config.slam_resistance_ticks / 20.0)),
                 Weapons.loreLine(String.format("Cooldown %.0fs",
-                        config.slam_cooldown_ticks / 20.0)));
+                        config.slam_cooldown_ticks / 20.0)),
+                Weapons.loreLine(String.format("Stagger: every %s hit within %.0fs stuns for %.1fs",
+                        config.stagger_hits == 3 ? "third" : config.stagger_hits + "th",
+                        config.stagger_window_ticks / 20.0, config.stagger_stun_ticks / 20.0)));
+    }
+
+    private static final class Swings {
+        int count;
+        long lastTick;
+    }
+
+    /** Attacker -> their run of quick hits. */
+    private final java.util.Map<java.util.UUID, Swings> swings = new java.util.HashMap<>();
+
+    @Override
+    public void onHit(ServerPlayer attacker, LivingEntity victim, ItemStack weapon,
+                      float damageDealt, WeaponsConfig config) {
+        CustomWeapons.animations().play(attacker, this, config);
+        if (config.stagger_hits <= 0 || config.stagger_stun_ticks <= 0) {
+            return;
+        }
+        long now = CustomWeapons.cooldowns().tick();
+        Swings run = swings.computeIfAbsent(attacker.getUUID(), id -> new Swings());
+        run.count = now - run.lastTick <= config.stagger_window_ticks ? run.count + 1 : 1;
+        run.lastTick = now;
+        if (run.count < config.stagger_hits) {
+            return;
+        }
+        run.count = 0;
+        CustomWeapons.stuns().stun(victim, config.stagger_stun_ticks, "Staggered");
+        if (attacker.level() instanceof ServerLevel level) {
+            CustomWeapons.effects().play(level, "stagger", victim);
+            level.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
+                    SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.5f, 1.8f);
+            level.sendParticles(ParticleTypes.CRIT, victim.getX(), victim.getY() + victim.getBbHeight() + 0.2,
+                    victim.getZ(), 15, 0.3, 0.1, 0.3, 0.05);
+        }
+        if (config.log_abilities) {
+            CustomWeapons.LOGGER.info("ABILITY stagger player={} victim={}",
+                    attacker.getName().getString(), victim.getName().getString());
+        }
+        attacker.displayClientMessage(Component.literal("Stagger").withStyle(ChatFormatting.GOLD), true);
+    }
+
+    @Override
+    public void forget(java.util.UUID player) {
+        swings.remove(player);
     }
 
     @Override

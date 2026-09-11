@@ -20,3 +20,5 @@ shotrig/.gradle/
 shotrig/shots/
 shotrig/shots_*/
 shotrig/*.log
+runtest/*.out
+shotrig/shots_v14*/

@@ -121,6 +121,52 @@ public final class BleedManager {
         }
     }
 
+    /** What an Exsanguinate did: how many bleeds burst, the damage they landed, the stacks they carried. */
+    public record Burst(int victims, double damage, int stacks) {
+    }
+
+    /**
+     * Bursts every bleed this player owns within {@code radius}: the remaining budget lands
+     * as one hit and the bleed is over.
+     */
+    public Burst burst(ServerPlayer owner, double radius, WeaponsConfig config) {
+        int victims = 0;
+        double damage = 0;
+        int stacks = 0;
+        Iterator<Map.Entry<UUID, Bleed>> it = active.entrySet().iterator();
+        while (it.hasNext()) {
+            Bleed bleed = it.next().getValue();
+            LivingEntity victim = bleed.victim;
+            if (!owner.getUUID().equals(bleed.owner) || victim == null || !victim.isAlive()
+                    || victim.isRemoved() || victim.level() != owner.level()
+                    || victim.distanceTo(owner) > radius) {
+                continue;
+            }
+            double amount = Math.max(0, bleed.budget);
+            it.remove();
+            if (amount <= 0) {
+                continue;
+            }
+            Hurt.deal(victim, victim.damageSources().indirectMagic(owner, owner), (float) amount);
+            victims++;
+            damage += amount;
+            stacks += bleed.stacks;
+            if (victim.level() instanceof ServerLevel level) {
+                CustomWeapons.effects().play(level, "blood_burst", victim);
+                level.sendParticles(new DustParticleOptions(0xFF0000, 1.5f),
+                        victim.getX(), victim.getY() + victim.getBbHeight() * 0.6, victim.getZ(),
+                        40, 0.4, 0.5, 0.4, 0.0);
+                level.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
+                        SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, 1.0f, 0.5f);
+            }
+            if (config.log_abilities) {
+                CustomWeapons.LOGGER.info("ABILITY bleed burst victim={} stacks={} amount={}",
+                        victim.getName().getString(), bleed.stacks, String.format("%.1f", amount));
+            }
+        }
+        return new Burst(victims, damage, stacks);
+    }
+
     /** Milk, death and a dimension change all end a bleed. */
     public void clear(UUID victim) {
         active.remove(victim);

@@ -167,7 +167,7 @@ public final class Frostbrand extends CustomWeapon {
         LivingEntity victim = target;
         Hurt.deal(victim, victim.damageSources().indirectMagic(player, player), (float) config.frost_beam_damage);
         victim.setTicksFrozen(victim.getTicksRequiredToFreeze() + config.frost_beam_freeze_ticks);
-        CustomWeapons.stuns().stun(victim, config.frost_beam_freeze_ticks, "Frozen");
+        CustomWeapons.stuns().stun(victim, config.frost_beam_freeze_ticks, "Frozen", true);
         CustomWeapons.effects().play(level, "frost_beam", victim);
         CustomWeapons.effects().later(61, () -> {
             if (!victim.isRemoved()) {

@@ -30,6 +30,9 @@ VANILLA = {
     "diamond_sword": {"type": "minecraft:model", "model": "minecraft:item/diamond_sword"},
     "iron_sword": {"type": "minecraft:model", "model": "minecraft:item/iron_sword"},
     "netherite_axe": {"type": "minecraft:model", "model": "minecraft:item/netherite_axe"},
+    "golden_sword": {"type": "minecraft:model", "model": "minecraft:item/golden_sword"},
+    "netherite_hoe": {"type": "minecraft:model", "model": "minecraft:item/netherite_hoe"},
+    "mace": {"type": "minecraft:model", "model": "minecraft:item/mace"},
     "trident": {
         "type": "minecraft:select", "property": "minecraft:display_context",
         "cases": [{"when": ["gui", "ground", "fixed", "on_shelf"],
@@ -65,11 +68,13 @@ VANILLA = {
 BASE_ITEM = {
     "bloodletter": "netherite_sword", "gale_edge": "diamond_sword", "frostbrand": "iron_sword",
     "aegis_hammer": "netherite_axe", "tidecaller": "trident", "stormpiercer": "bow", "hellfire": "crossbow",
+    "dawnbreaker": "golden_sword", "voidreaper": "netherite_hoe", "starfall": "mace",
 }
 
 DISPLAY_NAME = {
     "bloodletter": "Bloodletter", "gale_edge": "Gale Edge", "frostbrand": "Frostbrand",
     "aegis_hammer": "Aegis Hammer", "tidecaller": "Tidecaller", "stormpiercer": "Stormpiercer", "hellfire": "Hellfire",
+    "dawnbreaker": "Dawnbreaker", "voidreaper": "Voidreaper", "starfall": "Starfall",
 }
 
 
@@ -115,6 +120,7 @@ ANIMS = {
 WEAPON_ANIM = {
     "bloodletter": "slash", "frostbrand": "slash", "gale_edge": "thrust", "tidecaller": "thrust",
     "aegis_hammer": "slam", "stormpiercer": "shot", "hellfire": "blast",
+    "dawnbreaker": "slash", "voidreaper": "slash", "starfall": "slam",
 }
 
 
@@ -243,7 +249,7 @@ def write_pack():
 
     with open(os.path.join(PACK, "pack.mcmeta"), "w") as f:
         json.dump({"pack": {"pack_format": 75, "min_format": [75, 0], "max_format": [75, 99],
-                            "description": "CustomWeapons: 3D models for the seven legendaries"}}, f, indent=2)
+                            "description": "CustomWeapons: 3D models for the ten legendaries"}}, f, indent=2)
 
     models = {}
     counts = {}
@@ -387,10 +393,17 @@ const BLOCK_COLOUR = {
   'minecraft:stone': [0x8d8d8d, 1], 'minecraft:cobbled_deepslate': [0x4c4c50, 1], 'minecraft:gilded_blackstone': [0xd8b04a, 1],
   'minecraft:end_rod': [0xf4f4ff, 1], 'minecraft:fire': [0xff8a1e, 0.85], 'minecraft:magma_block': [0xd9581c, 1],
   'minecraft:blackstone': [0x2a2a2e, 1], 'minecraft:sea_lantern': [0xc8f0e8, 1],
+  'minecraft:gold_block': [0xf8d24a, 1], 'minecraft:yellow_stained_glass': [0xf6e04a, 0.5], 'minecraft:glowstone': [0xffe9a0, 1],
+  'minecraft:ochre_froglight': [0xf6dc8c, 1], 'minecraft:purpur_block': [0xa878a8, 1], 'minecraft:purple_stained_glass': [0x8a34c8, 0.6],
+  'minecraft:soul_lantern': [0x7ff0dc, 1], 'minecraft:soul_fire': [0x4ee0d8, 0.85], 'minecraft:orange_stained_glass': [0xf88a1e, 0.6],
+  'minecraft:basalt': [0x55555a, 1], 'minecraft:amethyst_block': [0x9a6ee0, 1], 'minecraft:nether_wart_block': [0x720202, 1],
 };
 const FX_NAMES = {frost_hit: 'Frostbrand hit', frost_shatter: 'Frostbrand shatter (frozen solid)', blood_slash: 'Bloodletter cut',
   wind_dash: 'Gale Edge dash', wind_hit: 'Gale Edge momentum strike', slam_wave: 'Aegis Hammer ground slam',
-  tide_splash: 'Tidecaller wet hit / harpoon', storm_cage: 'Stormpiercer shock', hell_burst: 'Hellfire blast'};
+  tide_splash: 'Tidecaller wet hit / harpoon', storm_cage: 'Stormpiercer shock', hell_burst: 'Hellfire blast',
+  sun_telegraph: 'Dawnbreaker sunstrike mark', sunstrike: 'Dawnbreaker sunstrike', rift_open: 'Voidreaper rift',
+  soul_harvest: 'Voidreaper soul harvest', comet_launch: 'Starfall comet launch', meteor_impact: 'Starfall impact',
+  blood_burst: 'Bloodletter exsanguinate', stagger: 'Aegis Hammer stagger'};
 
 function dummy(){
   const g = new THREE.Group();
