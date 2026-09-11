@@ -135,7 +135,7 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
         // A legendary that burns in the lava it was dropped into, or despawns while its owner
         // is offline, is gone from the world for good - so on an SMP it does neither.
         PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, entity) -> {
-            if (config.protect_altars && !level.isClientSide() && ALTARS.isProtected(pos)) {
+            if (config.protect_altars && !level.isClientSide() && !player.isCreative() && ALTARS.isProtected(pos)) {
                 if (player instanceof ServerPlayer serverPlayer) {
                     serverPlayer.displayClientMessage(Component.literal(
                             "The altar does not yield.").withStyle(ChatFormatting.GRAY), true);

@@ -251,7 +251,10 @@ public final class WeaponsConfig {
     public boolean one_altar_per_weapon = true;
     /** Tell everyone when a legendary is forged. */
     public boolean announce_forging = true;
-    /** Nobody mines the altar out from under the server. */
+    /**
+     * Nobody takes a temple apart: no survival mining of the pedestal, floor, colonnade or roof,
+     * no explosion of any kind, no block-breaking mob. Creative mode is exempt.
+     */
     public boolean protect_altars = true;
     /** A dropped legendary neither burns nor despawns. */
     public boolean protect_dropped_weapons = true;

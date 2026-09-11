@@ -729,7 +729,22 @@ public final class Altars {
                 return true;
             }
         }
+        // The whole temple, not just the pedestal: the 17x17 floor and its foundation, the
+        // colonnade, and the roof. A temple with a pillar mined out is a landmark defaced;
+        // one with the floor dug through is a forge you can fall out of.
+        for (Site site : sites.values()) {
+            int floor = site.y() - ALTAR_HEIGHT;
+            if (Math.abs(pos.getX() - site.x()) <= OUTER + 2 && Math.abs(pos.getZ() - site.z()) <= OUTER + 2
+                    && pos.getY() >= floor - 3 && pos.getY() <= floor + PILLAR_TOP + 6) {
+                return true;
+            }
+        }
         return false;
+    }
+
+    /** Everything that keeps a temple whole checks here: the config switch and the footprint. */
+    public static boolean guards(net.minecraft.server.level.ServerLevel level, BlockPos pos) {
+        return CustomWeapons.config().protect_altars && CustomWeapons.altars().isProtected(pos);
     }
 
     /**

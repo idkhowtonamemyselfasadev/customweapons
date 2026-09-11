@@ -49,18 +49,24 @@ public final class Projectiles {
             return;
         }
         long cutoff = clock.tick() - TTL_TICKS;
-        Iterator<Map.Entry<UUID, Armed>> it = armed.entrySet().iterator();
-        while (it.hasNext()) {
-            Armed entry = it.next().getValue();
+        // A snapshot, never the live map: a bolt that detonates on the ground in its tick
+        // hurts whatever stands next to it, that damage event calls take() on this same map
+        // from inside the loop, and the iterator's own remove() then threw a
+        // ConcurrentModificationException that took the server tick loop down with it.
+        for (Armed entry : java.util.List.copyOf(armed.values())) {
             AbstractArrow projectile = entry.projectile();
+            UUID id = projectile.getUUID();
             if (entry.since() < cutoff || projectile.isRemoved()
                     || !(projectile.level() instanceof ServerLevel level)) {
-                it.remove();
+                armed.remove(id);
                 continue;
+            }
+            if (!armed.containsKey(id)) {
+                continue;   // taken by a hit earlier in this same tick
             }
             ServerPlayer shooter = server.getPlayerList().getPlayer(entry.shooter());
             if (!entry.weapon().onProjectileTick(shooter, projectile, level, config)) {
-                it.remove();
+                armed.remove(id);
             }
         }
     }
