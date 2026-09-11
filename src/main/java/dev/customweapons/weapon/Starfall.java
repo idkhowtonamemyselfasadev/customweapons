@@ -154,13 +154,16 @@ public final class Starfall extends CustomWeapon {
             return;
         }
         long now = CustomWeapons.cooldowns().tick();
-        var it = comets.entrySet().iterator();
-        while (it.hasNext()) {
-            var entry = it.next();
+        // A snapshot: the impact below deals damage, and anything a damage or death event
+        // does to `comets` while a live iterator is open would throw.
+        for (var entry : java.util.List.copyOf(comets.entrySet())) {
             ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
             Falling falling = entry.getValue();
+            if (comets.get(entry.getKey()) != falling) {
+                continue;
+            }
             if (player == null || now > falling.until || Weapons.of(player.getMainHandItem(), config) != this) {
-                it.remove();    // it fizzled: they put the mace away, timed out, or left
+                comets.remove(entry.getKey());    // it fizzled: they put the mace away, timed out, or left
                 continue;
             }
             if (!player.onGround()) {
@@ -172,7 +175,7 @@ public final class Starfall extends CustomWeapon {
                 continue;
             }
             if (falling.airborne) {
-                it.remove();
+                comets.remove(entry.getKey());
                 if (player.level() instanceof ServerLevel level) {
                     impact(level, player, player.position(), null, config);
                 }

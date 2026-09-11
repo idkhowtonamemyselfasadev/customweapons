@@ -395,6 +395,37 @@ async function main() {
   }
 
   // ---------------------------------------------------- 4. a renamed sword is not one
+  // -------------------------------------------- 3c. a bleed tick that kills (the crash path)
+  // A bleed whose tick finishes its victim fires the death event, and the death event
+  // clears that victim's bleed - from inside the bleed ticker's own loop. That threw a
+  // ConcurrentModificationException in the server tick loop on a live server. A zombie
+  // on one heart, bled once, dies to the tick; the server must still be standing.
+  console.log('\n== 3c. a bleed tick that kills its victim ==');
+  {
+    cmd('tp Smith 0 -59 0');
+    cmd('kill @e[type=minecraft:zombie]');
+    cmd('summon minecraft:zombie 2.5 -59 0.5 {Health:5f,NoAI:1b,PersistenceRequired:1b,CustomName:\'"Bleeder"\',active_effects:[{id:"minecraft:fire_resistance",duration:1200}]}');
+    await sleep(1500);
+    const zombie = Object.values(smith.entities).find((e) => e.name === 'zombie');
+    check(!!zombie, 'a zombie on five health stands beside Smith');
+    if (zombie) {
+      const offset = fs.readFileSync(RUN + '/test.log', 'utf8').length;
+      smith.attack(zombie);   // one swing: ~3.7 through zombie armour leaves ~1.3 hp; the first 1.5 bleed tick kills
+      await sleep(3500);      // the bleed ticks every 10 ticks; the kill lands within the first two
+      const tail = fs.readFileSync(RUN + '/test.log', 'utf8').slice(offset);
+      const dead = /Bleeder (was slain|died|was killed)|Named entity .*Bleeder.* died/.test(tail)
+          || !Object.values(smith.entities).some((e) => e.id === zombie.id);
+      check(dead, 'the zombie died', dead ? 'gone' : 'still there');
+      check(!/ConcurrentModificationException/.test(tail), 'no ConcurrentModificationException in the log');
+      cmd('list');
+      await sleep(800);
+      const alive = /There are \d+ of a max/.test(fs.readFileSync(RUN + '/test.log', 'utf8').slice(offset));
+      check(alive, 'the server is still answering commands');
+    }
+    cmd('kill @e[type=minecraft:zombie]');
+    cmd('kill @e[type=minecraft:item]');
+  }
+
   console.log('\n== 4. an anvil-renamed sword must not bleed ==');
   cmd('clear Smith');
   cmd(`give Smith minecraft:netherite_sword[minecraft:custom_name='{"text":"Bloodletter"}'] 1`);
@@ -525,6 +556,15 @@ async function main() {
   check(bowAfter && (bowAfter.enchants || []).length === 0,
       'an enchantment forced onto the Stormpiercer does not stick',
       JSON.stringify((bowAfter && bowAfter.enchants) || []));
+  {
+    // Unenchantable means no Unbreaking and no Mending, so the bow itself must not wear.
+    const offset = fs.readFileSync(RUN + '/test.log', 'utf8').length;
+    cmd('data get entity Archer SelectedItem.components."minecraft:unbreakable"');
+    await sleep(600);
+    const tail = fs.readFileSync(RUN + '/test.log', 'utf8').slice(offset);
+    check(/Archer has the following entity data: \{\}/.test(tail) && !/Found no elements/.test(tail),
+        'the Stormpiercer is unbreakable (server-side component)', tail.trim().split('\n').slice(-1)[0] || '(no echo)');
+  }
 
   const shootAt = archer.players['Dummy'] && archer.players['Dummy'].entity;
   if (!shootAt) {
@@ -1536,7 +1576,9 @@ async function main() {
     clearSlimes();
     cmd('tp Smith 0 -59 0');
     cmd('damage Smith 10 minecraft:generic');
-    cmd('summon minecraft:zombie 1 -59 2 {NoAI:1b,Health:1f,Silent:1b}');
+    // Fire resistance: a one-health zombie in daylight otherwise burns to death before the
+    // swing lands, and a kill by the sun feeds nobody (one run in three or so).
+    cmd('summon minecraft:zombie 1 -59 2 {NoAI:1b,Health:1f,Silent:1b,active_effects:[{id:"minecraft:fire_resistance",duration:1200}]}');
     // Up to 4 s for the spawn packet: one run's zombie took longer than a second to appear.
     let zombie = null;
     await waitUntil(() => (zombie = Object.values(smith.entities).find((e) => e.name === 'zombie')), 4000);

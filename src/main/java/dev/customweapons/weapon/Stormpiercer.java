@@ -74,7 +74,7 @@ public final class Stormpiercer extends CustomWeapon {
                 config.shock_chain_range, config.shock_chain_damage)));
         lines.add(Weapons.loreLine(String.format("Cooldown %.0fs - fires normally meanwhile",
                 config.shock_cooldown_ticks / 20.0)));
-        lines.add(Weapons.loreLine("Cannot be enchanted"));
+        lines.add(Weapons.loreLine("Cannot be enchanted - and never breaks"));
         return lines;
     }
 
@@ -101,6 +101,9 @@ public final class Stormpiercer extends CustomWeapon {
     public void customise(ItemStack stack, WeaponsConfig config) {
         // Stops an enchanting table offering it anything at all.
         stack.remove(DataComponents.ENCHANTABLE);
+        // A bow that can never take Unbreaking or Mending, and that exists three times
+        // on the whole world, would otherwise snap after 384 shots. It does not wear.
+        stack.set(DataComponents.UNBREAKABLE, net.minecraft.util.Unit.INSTANCE);
     }
 
     @Override
@@ -113,6 +116,9 @@ public final class Stormpiercer extends CustomWeapon {
         ItemEnchantments enchantments = stack.get(DataComponents.ENCHANTMENTS);
         if (enchantments != null && !enchantments.isEmpty()) {
             stack.remove(DataComponents.ENCHANTMENTS);
+        }
+        if (!stack.has(DataComponents.UNBREAKABLE)) {
+            stack.set(DataComponents.UNBREAKABLE, net.minecraft.util.Unit.INSTANCE);
         }
     }
 

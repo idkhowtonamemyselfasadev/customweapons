@@ -153,6 +153,7 @@ assert_log() {  # description, pattern, expected-count-comparison
 }
 assert_log "bleed applied and reached three stacks" "ABILITY bleed apply .* stacks=3" -ge 1
 assert_log "bleed ticked repeatedly"                "ABILITY bleed tick"              -ge 4
+assert_log "a bleed tick killed its victim without a crash" "ABILITY bleed tick victim=.?Bleeder" -ge 1
 assert_log "the dash fired"                         "ABILITY dash"                    -ge 1
 assert_log "the Momentum Strike fired"              "ABILITY momentum"                -ge 1
 assert_log "the slam fired and found a target"      "ABILITY slam .* targets=[1-9]"   -ge 1
