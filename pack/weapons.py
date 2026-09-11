@@ -139,6 +139,14 @@ BOW = {
     "firstperson_righthand": {"rotation": [0, -90, 25], "translation": [1.13, 3.2, 1.13], "scale": [0.68, 0.68, 0.68]},
     "firstperson_lefthand": {"rotation": [0, 90, -25], "translation": [1.13, 3.2, 1.13], "scale": [0.68, 0.68, 0.68]},
 }
+# The trident is longer than a sword; held with the sword transform its prongs leave the
+# top of the screen, so it sits a little lower and smaller.
+TRIDENT = {
+    "thirdperson_righthand": {"rotation": [0, -90, 55], "translation": [0, 3.5, 0.5], "scale": [0.8, 0.8, 0.8]},
+    "thirdperson_lefthand": {"rotation": [0, 90, -55], "translation": [0, 3.5, 0.5], "scale": [0.8, 0.8, 0.8]},
+    "firstperson_righthand": {"rotation": [0, -90, 25], "translation": [-1.0, 2.4, 1.13], "scale": [0.6, 0.6, 0.6]},
+    "firstperson_lefthand": {"rotation": [0, 90, -25], "translation": [1.0, 2.4, 1.13], "scale": [0.6, 0.6, 0.6]},
+}
 CROSSBOW = {
     "thirdperson_righthand": {"rotation": [-90, 0, -60], "translation": [2, 0.1, -3], "scale": [0.9, 0.9, 0.9]},
     "thirdperson_lefthand": {"rotation": [-90, 0, 30], "translation": [2, 0.1, -3], "scale": [0.9, 0.9, 0.9]},
@@ -151,6 +159,9 @@ def model_json(boxes, palette, tex_ref, display):
     order = list(palette)
     elements = []
     u = 16.0 / 64
+    # Vanilla's sword, bow and trident sprites lean bottom-left to top-right; its crossbow
+    # leans the other way (tip at the top left), and its hand transforms assume that.
+    lean = 45 if display is CROSSBOW else -45
     for (x0, y0, z0), (x1, y1, z1), role in boxes:
         i = order.index(role)
         ox, oy = (i % 4) * SWATCH, (i // 4) * SWATCH
@@ -164,7 +175,7 @@ def model_json(boxes, palette, tex_ref, display):
             "from": [round(x0 * SCALE, 3), round(y0 * SCALE, 3), round(z0 * SCALE, 3)],
             "to": [round(x1 * SCALE, 3), round(y1 * SCALE, 3), round(z1 * SCALE, 3)],
             # Upright in the grid, diagonal in the game: the same lean as a vanilla sprite.
-            "rotation": {"origin": [8, 8, 8], "axis": "z", "angle": -45},
+            "rotation": {"origin": [8, 8, 8], "axis": "z", "angle": lean},
             "faces": faces,
         })
     return {
@@ -450,7 +461,7 @@ VARIANTS = [
     ("gale_edge", "gale_edge", gale_edge, HANDHELD),
     ("frostbrand", "frostbrand", frostbrand, HANDHELD),
     ("aegis_hammer", "aegis_hammer", aegis_hammer, HANDHELD),
-    ("tidecaller", "tidecaller", tidecaller, HANDHELD),
+    ("tidecaller", "tidecaller", tidecaller, TRIDENT),
     ("stormpiercer", "stormpiercer", lambda v: stormpiercer(v), BOW),
     ("stormpiercer", "stormpiercer_pulling_0", lambda v: stormpiercer(v, 2, 22), BOW),
     ("stormpiercer", "stormpiercer_pulling_1", lambda v: stormpiercer(v, 4, 26), BOW),

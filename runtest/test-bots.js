@@ -7,8 +7,8 @@ const mineflayer = require('/home/tim/claude/anticheat/test/node_modules/minefla
 const fs = require('fs');
 // The mod's world effects are vanilla block_display entities; a client only ever sees the
 // numeric type id in spawn_entity.
-const BLOCK_DISPLAY = require('/home/tim/claude/anticheat/test/node_modules/minecraft-data')('1.21.11')
-    .entitiesByName.block_display.id;
+const MC_DATA = require('/home/tim/claude/anticheat/test/node_modules/minecraft-data')('1.21.11');
+const BLOCK_DISPLAY = MC_DATA.entitiesByName.block_display.id;
 
 const RUN = __dirname;
 const PORT = parseInt(process.env.PORT || '25603', 10);
@@ -65,6 +65,9 @@ function connect(username) {
         if (bot.fxSpawns.some((s) => s.id === id)) bot.fxGone.push({ t: now, id });
       }
     });
+    // Every clientbound `position` packet: /tp, and the shock stun putting the bot back.
+    bot.forcedMoves = 0;
+    bot.on('forcedMove', () => bot.forcedMoves++);
     bot.once('spawn', () => resolve(bot));
     bot.on('error', reject);
     bot.on('kicked', (r) => reject(new Error('kicked: ' + JSON.stringify(r))));
@@ -533,7 +536,9 @@ async function main() {
     // A full draw at four blocks, up to three attempts: a bot's aim is not what is under
     // test here, and a single miss would fail a run for no reason. Both are put back on
     // their marks and Dummy healed to full before every shot, so the drop is one arrow's.
-    const fullDrawAtDummy = async (label, arms) => {
+    // `probe`, if given, runs the moment the hit shows on Dummy's health bar, while the
+    // storm_cage is still being counted: the stun it looks at lasts only 40 ticks.
+    const fullDrawAtDummy = async (label, arms, probe = null) => {
       for (let attempt = 1; attempt <= 3; attempt++) {
         console.log(`   ${label}, attempt ${attempt}`);
         cmd('tp Dummy 3 -59 0');
@@ -544,6 +549,9 @@ async function main() {
         if (!target) break;
         await archer.lookAt(target.position.offset(0, 1.5, 0), true);
         archer.actionBars.length = 0;
+        // "Stunned" reaches Dummy before the health packet of the hit does, so the bar is
+        // cleared here and not once the hit shows.
+        dummy.actionBars.length = 0;
         const before = dummy.health;
         archer.activateItem();
         await sleep(1400);
@@ -552,10 +560,17 @@ async function main() {
         if (arms) fullDraws++;
         // The storm_cage (4 end rods + glass) stands for 25 ticks around the victim, so
         // the server-side look at its block states has to happen the moment it appears.
-        let endRods = null;
-        if (arms && await waitUntil(() => dummy.fxSpawns.some((s) => s.t >= fxAt), 1500)) {
-          endRods = await fxCount(',nbt={block_state:{Name:"minecraft:end_rod"}}');
+        const endRodsDone = (async () => {
+          if (arms && await waitUntil(() => dummy.fxSpawns.some((s) => s.t >= fxAt), 1500)) {
+            return fxCount(',nbt={block_state:{Name:"minecraft:end_rod"}}');
+          }
+          return null;
+        })();
+        let probed = null;
+        if (arms && probe && await waitUntil(() => dummy.health < before, 1500)) {
+          probed = await probe();
         }
+        const endRods = await endRodsDone;
         await sleep(Math.max(0, 2500 - (Date.now() - fxAt)));
         const drop = before - dummy.health;
         const fx = fxSince(dummy, fxAt, 1500, 2000);
@@ -563,16 +578,87 @@ async function main() {
             + JSON.stringify(archer.actionBars));
         console.log(`   storm_cage: Dummy was sent ${fx.spawned} block displays, ${fx.gone} removed within 2s; `
             + `end_rod displays on the server while it stood: ${endRods}`);
-        if (drop > 0) return { drop, bars: archer.actionBars.slice(), fx, endRods };
+        if (drop > 0) return { drop, bars: archer.actionBars.slice(), fx, endRods, probed };
       }
       return null;
+    };
+
+    // The stun: for 40 ticks after the shock Dummy is told "Stunned", carries Slowness VII,
+    // and cannot leave the spot it was hit on - the server puts it back every tick, which a
+    // vanilla client sees as `position` packets. Once it ends, walking works again.
+    // Distances are measured from a sample taken ~3 ticks after the hit, so the arrow's
+    // knockback and the /tp before the shot are not counted against it.
+    const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+    const stunProbe = async () => {
+      const hitAt = Date.now();
+      await sleep(150);
+      const pinned = dummy.entity.position.clone();
+      const slowId = MC_DATA.effectsByName.Slowness.id;
+      const result = { pinned, forcedMoves: 0, maxDrift: NaN, endDrift: NaN, serverPinned: NaN, walked: NaN };
+
+      const told = await waitUntil(() => dummy.actionBars.some((m) => m.trim() === 'Stunned'), 500);
+      check(told, 'Dummy is told "Stunned" on its action bar',
+          JSON.stringify(dummy.actionBars.slice(-3)));
+      const effects = dummy.entity.effects || {};
+      const slow = effects[slowId];
+      if (Object.keys(effects).length === 0) {
+        console.log('   (skip) mineflayer reported no effects on Dummy at all; slowness not checked');
+      } else {
+        check(slow && slow.amplifier === 6, 'Dummy carries Slowness VII during the stun',
+            'effects on the client: ' + JSON.stringify(effects));
+      }
+
+      // Try to walk away from Archer (who stands at +z) for 1.5 s, sampling every 50 ms.
+      await dummy.lookAt(pinned.offset(0, 1.6, -10), true);
+      const movesBefore = dummy.forcedMoves;
+      const walkStart = Date.now();
+      let maxDrift = 0;
+      let serverPinned = null;
+      dummy.setControlState('forward', true);
+      while (Date.now() - walkStart < 1500) {
+        await sleep(50);
+        maxDrift = Math.max(maxDrift, dist(dummy.entity.position, pinned));
+        // Ask the server itself where Dummy is, once, while the stun is still on.
+        if (serverPinned === null && Date.now() - walkStart >= 900) {
+          serverPinned = fxCount('',
+              `name=Dummy,x=${pinned.x.toFixed(2)},y=${pinned.y.toFixed(2)},z=${pinned.z.toFixed(2)},distance=..0.5`);
+        }
+      }
+      dummy.setControlState('forward', false);
+      const endDrift = dist(dummy.entity.position, pinned);
+      console.log(`   pinned at ${pinned}, now at ${dummy.entity.position}`);
+      result.maxDrift = maxDrift;
+      result.endDrift = endDrift;
+      result.forcedMoves = dummy.forcedMoves - movesBefore;
+      result.serverPinned = serverPinned === null ? NaN : await serverPinned;
+      console.log(`   stunned walk attempt: max drift ${maxDrift.toFixed(3)}, end drift ${endDrift.toFixed(3)} blocks; `
+          + `${result.forcedMoves} position packets from the server; server sees Dummy within 0.5: ${result.serverPinned}`);
+      check(maxDrift <= 0.5 && endDrift <= 0.5,
+          'while stunned Dummy cannot walk away (stays within 0.5 of where it was hit)',
+          `max ${maxDrift.toFixed(3)}, end ${endDrift.toFixed(3)}`);
+      check(result.serverPinned === 1,
+          'the server also has Dummy within 0.5 of the spot mid-stun', `count ${result.serverPinned}`);
+
+      // 40 ticks = 2 s. At 2.5 s the effect and the pin are both gone.
+      await sleep(Math.max(0, hitAt + 2500 - Date.now()));
+      const stillSlow = (dummy.entity.effects || {})[slowId];
+      console.log(`   after the stun: slowness on the client: ${JSON.stringify(stillSlow || null)}`);
+      const released = dummy.entity.position.clone();
+      dummy.setControlState('forward', true);
+      await sleep(1000);
+      dummy.setControlState('forward', false);
+      result.walked = dist(dummy.entity.position, released);
+      check(result.walked > 0.8, 'once the stun ends Dummy can walk again (1 s forward > 0.8 blocks)',
+          `${result.walked.toFixed(2)} blocks`);
+      return result;
     };
 
     // Dummy wears no armour and has no effects, so the arrow is worth exactly 10 and the
     // shock exactly 6 on top. The arrow loses a whisker of speed over four blocks, hence
     // the tolerance.
-    const shocked = await fullDrawAtDummy('full draw, shock ready', true);
+    const shocked = await fullDrawAtDummy('full draw, shock ready', true, stunProbe);
     check(!!shocked, 'a fully drawn arrow lands and shocks');
+    check(!!(shocked && shocked.probed), 'the stun was observed on the shock hit');
     if (shocked) {
       shockHitAt = Date.now();
       check(Math.abs(shocked.drop - 16) <= 1.5,

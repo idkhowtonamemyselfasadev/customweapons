@@ -1,0 +1,77 @@
+wait 60
+cmd gamemode survival
+cmd time set 6000
+cmd weather clear
+cmd kill @e[type=!player]
+cmd tp @s 0.5 -60 0.5 0 12
+cmd clear @s
+cmd item replace entity @s hotbar.0 with minecraft:crossbow
+cmd item replace entity @s hotbar.1 with minecraft:crossbow[custom_model_data={strings:["cw:hellfire"]}]
+cmd item replace entity @s hotbar.2 with minecraft:bow
+cmd item replace entity @s hotbar.3 with minecraft:bow[custom_model_data={strings:["cw:stormpiercer"]}]
+cmd item replace entity @s hotbar.4 with minecraft:trident[custom_model_data={strings:["cw:tidecaller"]}]
+cmd item replace entity @s hotbar.5 with minecraft:trident
+cmd give @s minecraft:arrow 16
+wait 20
+look 0 12
+hotbar 0
+wait 15
+shot c1_vanilla_crossbow_idle
+hold 32
+wait 15
+shot c2_vanilla_crossbow_pulling
+wait 25
+shot c3_vanilla_crossbow_loaded
+camera front
+wait 5
+shot c4_vanilla_crossbow_loaded_third
+camera first
+use
+wait 10
+hotbar 1
+wait 15
+shot c5_hellfire_idle
+hold 32
+wait 15
+shot c6_hellfire_pulling
+wait 25
+shot c7_hellfire_loaded
+camera front
+wait 5
+shot c8_hellfire_loaded_third
+camera first
+use
+wait 10
+hotbar 2
+wait 15
+shot c9_vanilla_bow_idle
+hold 30
+wait 22
+shot c10_vanilla_bow_drawn
+wait 20
+hotbar 3
+wait 15
+shot c11_stormpiercer_idle
+hold 30
+wait 22
+shot c12_stormpiercer_drawn
+camera front
+wait 3
+shot c13_stormpiercer_drawn_third
+camera first
+wait 20
+hotbar 5
+wait 15
+shot c14_vanilla_trident
+camera front
+wait 5
+shot c15_vanilla_trident_third
+camera first
+hotbar 4
+wait 15
+shot c16_tidecaller
+camera front
+wait 5
+shot c17_tidecaller_third
+wait 5
+quit

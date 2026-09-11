@@ -65,6 +65,9 @@ public final class Stormpiercer extends CustomWeapon {
         if (!executes.isEmpty()) {
             lines.add(Weapons.loreLine("Kills " + executes + " outright"));
         }
+        if (config.shock_stun_ticks > 0) {
+            lines.add(Weapons.loreLine(String.format("Stuns the target for %.1fs", config.shock_stun_ticks / 20.0)));
+        }
         lines.add(Weapons.loreLine(String.format("Marks with Glowing for %.0fs",
                 config.shock_glowing_ticks / 20.0)));
         lines.add(Weapons.loreLine(String.format("Chains to one target within %.0f for %.1f",
