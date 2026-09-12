@@ -222,6 +222,18 @@ public final class CustomWeapons implements DedicatedServerModInitializer {
 
     // ---------------------------------------------------------------------- events
 
+    /** From {@code SwingMixin}: a left-click while sneaking, main hand. */
+    public static void onSneakSwing(ServerPlayer player) {
+        if (config == null || player.isSpectator()) {
+            return;
+        }
+        ItemStack stack = player.getMainHandItem();
+        CustomWeapon weapon = Weapons.of(stack, config);
+        if (weapon != null) {
+            weapon.onUltimate(player, stack, config);
+        }
+    }
+
     private InteractionResult onUseItem(net.minecraft.world.entity.player.Player player,
                                         net.minecraft.world.level.Level level,
                                         net.minecraft.world.InteractionHand hand) {

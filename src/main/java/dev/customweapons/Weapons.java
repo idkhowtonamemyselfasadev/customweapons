@@ -126,7 +126,13 @@ public final class Weapons {
      */
     public static void stamp(ItemStack stack, CustomWeapon weapon, WeaponsConfig config, int generation) {
         stack.set(DataComponents.CUSTOM_NAME, weapon.displayName());
-        stack.set(DataComponents.LORE, new ItemLore(weapon.lore(config)));
+        java.util.List<net.minecraft.network.chat.Component> lore = new java.util.ArrayList<>(weapon.lore(config));
+        String ultimate = weapon.ultimateLore(config);
+        if (ultimate != null) {
+            lore.add(net.minecraft.network.chat.Component.literal("Sneak + left-click: " + ultimate)
+                    .withStyle(style -> style.withColor(net.minecraft.ChatFormatting.LIGHT_PURPLE).withItalic(false)));
+        }
+        stack.set(DataComponents.LORE, new ItemLore(lore));
 
         ItemAttributeModifiers attributes = weapon.attributes(config);
         if (attributes != null) {

@@ -55,9 +55,11 @@ public final class WeaponsConfig {
     public double dash_power = 1.5;
     public double dash_min_y = 0.3;
     public double dash_max_y = 0.8;
+    /** Whoever the dash carries the player into takes this as true damage (buffed 2026-09-12: the dash did no damage). */
+    public double dash_impact_damage = 4.0;
     public int dash_fall_immunity_ticks = 120;
     public int momentum_window_ticks = 40;
-    public double momentum_bonus_damage = 4.0;
+    public double momentum_bonus_damage = 5.0;
 
     // ---------------------------------------------------------------- Stormpiercer
     public boolean stormpiercer_enabled = true;
@@ -77,7 +79,7 @@ public final class WeaponsConfig {
     public double shock_bonus_damage = 6.0;
     public int shock_glowing_ticks = 120;
     public double shock_chain_range = 5.0;
-    public double shock_chain_damage = 3.0;
+    public double shock_chain_damage = 4.0;
     /** A lightning bolt strikes whatever a fully drawn arrow hits. */
     public boolean shock_lightning = true;
     /**
@@ -101,7 +103,7 @@ public final class WeaponsConfig {
     public double aegis_hammer_attack_speed = 0.9;
     public int slam_cooldown_ticks = 300;
     public double slam_radius = 5.0;
-    public double slam_damage = 8.0;
+    public double slam_damage = 6.0;
     public int slam_slowness_ticks = 80;
     public int slam_slowness_amplifier = 1;
     public int slam_resistance_ticks = 100;
@@ -125,7 +127,7 @@ public final class WeaponsConfig {
     public int frost_ticks_per_hit = 70;
     public int frost_slowness_ticks = 40;
     public int frost_slowness_amplifier = 1;
-    public double shatter_damage = 8.0;
+    public double shatter_damage = 6.0;
     /**
      * The ice beam, on right-click: a ray up to this far that freezes the first thing it
      * touches solid - the ice closes around it, it cannot move, and it takes the damage.
@@ -150,6 +152,8 @@ public final class WeaponsConfig {
     /** How hard a harpooned target is yanked towards the thrower, blocks a tick. */
     public double harpoon_pull_power = 1.4;
     public double harpoon_pull_lift = 0.35;
+    /** True damage on the harpooned target while it is dragged in (buffed 2026-09-12: the pull alone did nothing). */
+    public double harpoon_damage = 4.0;
 
     // ------------------------------------------------------------------- Hellfire
     public boolean hellfire_enabled = true;
@@ -158,7 +162,9 @@ public final class WeaponsConfig {
      * Blast strength. TNT is 4.0 and a creeper 3.0; at 2.0 a direct hit is about 15 before
      * armour and falls off fast with distance. Blocks are never broken.
      */
-    public double hellfire_explosion_power = 2.0;
+    public double hellfire_explosion_power = 3.0;
+    /** True damage on the creature a bolt hits directly, on top of the blast (buffed 2026-09-12: the crossbow did next to nothing). */
+    public double hellfire_direct_hit_damage = 4.0;
     /** Leave fire behind, like a ghast fireball would. */
     public boolean hellfire_fire = false;
 
@@ -179,7 +185,7 @@ public final class WeaponsConfig {
      */
     public double sunstrike_range = 24.0;
     public double sunstrike_radius = 3.0;
-    public double sunstrike_damage = 9.0;
+    public double sunstrike_damage = 6.0;
     public int sunstrike_fire_ticks = 80;
     public int sunstrike_delay_ticks = 20;
     public int sunstrike_cooldown_ticks = 300;
@@ -220,7 +226,7 @@ public final class WeaponsConfig {
     public int comet_fall_immunity_ticks = 120;
     public int comet_cooldown_ticks = 400;
     public double impact_radius = 4.0;
-    public double impact_damage = 8.0;
+    public double impact_damage = 6.0;
     public int impact_fire_ticks = 40;
     public double impact_knock_out = 0.8;
     public double impact_knock_up = 0.4;
@@ -286,9 +292,9 @@ public final class WeaponsConfig {
     /** With pack_required off: ask each player in chat, on join, whether they want the models. */
     public boolean pack_offer_on_join = true;
     /** A direct download link to the pack zip. A GitHub release asset works. */
-    public String pack_url = "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.4.0/CustomWeapons-Models.zip";
+    public String pack_url = "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.6.0/CustomWeapons-Models.zip";
     /** SHA-1 of that zip. Change it with the file, or clients keep a stale cached copy. */
-    public String pack_sha1 = "1fb926c70c7c07d8b26e4ed12b61297926a826a4";
+    public String pack_sha1 = "3349b49ae6426769679ef2e24a45ecff110e1ec6";
     public String pack_offer_message = "This server has 3D models for the legendary weapons. Want them?";
 
     // --------------------------------------------------------------- world effects
@@ -306,6 +312,51 @@ public final class WeaponsConfig {
      * per frame. 0 turns it off. Only players with the pack see anything.
      */
     public int animation_ticks = 10;
+
+    // ---------------------------------------------------------------- ultimates
+    // Sneak + left-click. True damage (ignores armour and Protection, like the warden's
+    // boom), so the numbers are what a Protection IV netherite player actually loses.
+    // Six damage each, three hearts: an ultimate plus the weapon's own ability lands at
+    // six hearts at most (Meteor Shower + Starfall's impact), never a kill from full health.
+    public double nova_radius = 6.0;
+    public double nova_damage = 6.0;
+    public double nova_heal_per_victim = 1.0;
+    public int nova_cooldown_ticks = 800;
+    public double tempest_radius = 6.0;
+    public double tempest_damage = 6.0;
+    public double tempest_fling = 1.4;
+    public double tempest_lift = 0.9;
+    public int tempest_cooldown_ticks = 600;
+    public double thunderstorm_radius = 12.0;
+    public double thunderstorm_damage = 6.0;
+    public int thunderstorm_stun_ticks = 25;
+    public int thunderstorm_cooldown_ticks = 1000;
+    public double earthquake_radius = 8.0;
+    public double earthquake_damage = 6.0;
+    public int earthquake_cooldown_ticks = 1100;
+    public double absolute_zero_radius = 7.0;
+    public double absolute_zero_damage = 6.0;
+    public int absolute_zero_freeze_ticks = 80;
+    public int absolute_zero_cooldown_ticks = 900;
+    public double maelstrom_radius = 8.0;
+    public double maelstrom_damage = 6.0;
+    public double maelstrom_pull = 1.2;
+    public int maelstrom_cooldown_ticks = 800;
+    public double inferno_radius = 7.0;
+    public double inferno_damage = 6.0;
+    public int inferno_fire_ticks = 120;
+    public int inferno_cooldown_ticks = 1000;
+    public double judgement_radius = 10.0;
+    public double judgement_damage = 6.0;
+    public double judgement_heal = 4.0;
+    public int judgement_cooldown_ticks = 1100;
+    public double void_collapse_radius = 7.0;
+    public double void_collapse_damage = 6.0;
+    public int void_collapse_wither_ticks = 60;
+    public int void_collapse_cooldown_ticks = 1000;
+    public double meteor_shower_radius = 8.0;
+    public double meteor_shower_damage = 6.0;
+    public int meteor_shower_cooldown_ticks = 1200;
 
     // ----------------------------------------------------------------------- misc
     /** How often held/carried weapons are re-stamped with their stats, in ticks. */

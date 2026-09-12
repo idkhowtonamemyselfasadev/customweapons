@@ -29,6 +29,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
+import dev.customweapons.Ultimate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -257,5 +258,38 @@ public final class Voidreaper extends CustomWeapon {
     @Override
     public void forget(UUID player) {
         backstab.remove(player);
+    }
+
+    // ---- ultimate: Void Collapse -----------------------------------------------------------------
+    public static final String VOID_COLLAPSE = "void_collapse";
+
+    @Override
+    public void onUltimate(ServerPlayer player, ItemStack weapon, WeaponsConfig config) {
+        if (!Ultimate.ready(player, VOID_COLLAPSE, "Void Collapse")) {
+            return;
+        }
+        ServerLevel level = (ServerLevel) player.level();
+        int hit = 0;
+        for (LivingEntity victim : Ultimate.targets(player, config.void_collapse_radius)) {
+            // Torn to the player's feet, then the void takes its due.
+            Vec3 to = player.position().add(player.getLookAngle().normalize().scale(1.5));
+            if (victim instanceof ServerPlayer sp) {
+                sp.teleportTo(level, to.x, to.y, to.z, Set.of(), sp.getYRot(), sp.getXRot(), false);
+            } else {
+                victim.teleportTo(to.x, to.y, to.z);
+            }
+            if (Ultimate.strike(player, victim, config.void_collapse_damage)) {
+                hit++;
+            }
+            victim.addEffect(new MobEffectInstance(MobEffects.WITHER, config.void_collapse_wither_ticks, 1));
+            CustomWeapons.effects().play(level, "rift_open", victim);
+        }
+        level.sendParticles(ParticleTypes.REVERSE_PORTAL, player.getX(), player.getY() + 1, player.getZ(), 200, 3.5, 1, 3.5, 0.3);
+        Ultimate.fired(player, this, VOID_COLLAPSE, config.void_collapse_cooldown_ticks, "Void Collapse", hit, SoundEvents.ENDERMAN_TELEPORT, 0.4f, config);
+    }
+
+    @Override
+    public String ultimateLore(WeaponsConfig config) {
+        return String.format("Void Collapse - everything within %.0f blocks is torn to your feet, withered and takes %.1f true damage. %ds", config.void_collapse_radius, config.void_collapse_damage, config.void_collapse_cooldown_ticks / 20);
     }
 }

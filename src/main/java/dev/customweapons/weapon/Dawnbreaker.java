@@ -26,6 +26,9 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
+import dev.customweapons.Ultimate;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import java.util.List;
 
 /**
@@ -224,5 +227,36 @@ public final class Dawnbreaker extends CustomWeapon {
         }
         player.displayClientMessage(Component.literal(String.format("Daylight  +%.1f", config.daylight_heal))
                 .withStyle(ChatFormatting.YELLOW), true);
+    }
+
+    // ---- ultimate: Judgement ---------------------------------------------------------------------
+    public static final String JUDGEMENT = "judgement";
+
+    @Override
+    public void onUltimate(ServerPlayer player, ItemStack weapon, WeaponsConfig config) {
+        if (!Ultimate.ready(player, JUDGEMENT, "Judgement")) {
+            return;
+        }
+        ServerLevel level = (ServerLevel) player.level();
+        int hit = 0;
+        for (LivingEntity victim : Ultimate.targets(player, config.judgement_radius)) {
+            double amount = config.judgement_damage * (victim.getType().is(net.minecraft.tags.EntityTypeTags.UNDEAD) ? 1.5 : 1.0);
+            if (Ultimate.strike(player, victim, amount)) {
+                hit++;
+            }
+            victim.igniteForTicks(80);
+            victim.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 60, 0));
+            CustomWeapons.effects().play(level, "sunstrike", victim);
+        }
+        if (hit > 0) {
+            player.heal((float) config.judgement_heal);
+        }
+        level.sendParticles(ParticleTypes.END_ROD, player.getX(), player.getY() + 2, player.getZ(), 120, 4, 2, 4, 0.02);
+        Ultimate.fired(player, this, JUDGEMENT, config.judgement_cooldown_ticks, "Judgement", hit, SoundEvents.BEACON_ACTIVATE, 1.4f, config);
+    }
+
+    @Override
+    public String ultimateLore(WeaponsConfig config) {
+        return String.format("Judgement - light on everything within %.0f blocks: %.1f true damage (x1.5 undead), blinded and burning; heals you %.0f. %ds", config.judgement_radius, config.judgement_damage, config.judgement_heal, config.judgement_cooldown_ticks / 20);
     }
 }

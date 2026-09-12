@@ -156,6 +156,42 @@ counterpart on raw damage, and the ability is on top. All of it is in the config
 
 ---
 
+## The ultimates — sneak + left-click (v1.6)
+
+Every weapon has a second ability: **sneak and left-click** with it in hand. Each hits
+*everything* around you, each is different, and each does **3 hearts of true damage** —
+dealt like the warden's sonic boom, so it ignores armour and Protection: three hearts
+off a Protection IV netherite player is three hearts. Cooldowns are 30–60 s. The numbers
+are sized so an ultimate plus the weapon's own ability lands at **6 hearts at most**
+(Meteor Shower + Starfall's impact) — never a kill from full health. All in the config.
+
+| Weapon | Ultimate | On top of the 3 hearts | Cooldown |
+|---|---|---|---|
+| Bloodletter | **Crimson Nova** (6 blocks) | full bleed on everyone; heals you ½ heart per victim | 40 s |
+| Gale Edge | **Tempest** (6) | flung up and away, Slowness II | 30 s |
+| Stormpiercer | **Thunderstorm** (12) | lightning on each, stunned 1 s, glowing | 50 s |
+| Aegis Hammer | **Earthquake** (8, from the ground) | launched, Slowness III; Resistance II for you | 55 s |
+| Frostbrand | **Absolute Zero** (7) | frozen solid for 4 s | 45 s |
+| Tidecaller | **Maelstrom** (8) | dragged to you, slowed; Conduit Power for you | 40 s |
+| Hellfire | **Inferno** (7) | burning 6 s, shoved | 50 s |
+| Dawnbreaker | **Judgement** (10) | ×1.5 vs undead, blinded, burning; heals you 2 hearts | 55 s |
+| Voidreaper | **Void Collapse** (7) | torn to your feet, Wither II | 50 s |
+| Starfall | **Meteor Shower** (8) | knocked away, set alight; fall immunity for you | 60 s |
+
+Each has its own animation in the pack (frames 11–20: a full spin, a raise-and-slam, a
+sky-point, a wide sweep, a heavy recoil), and the tooltip's last line describes it.
+
+**Ability buffs in the same pass** (the ones that "did no damage"): Gale Edge's dash now
+hits whoever is in its path for 2 hearts of true damage and the Momentum Strike does 2½;
+the Stormpiercer shock bonus is 3 hearts and the chain 2; Tidecaller's harpoon does 2
+hearts of true damage on the pull; Hellfire's blast is power 3.0 plus 2 hearts of true
+damage on a direct hit; Aegis slam, ice beam, shatter, sunstrike, backstab and Starfall
+impact are all 3 hearts.
+
+**The pack also carries Beyond the End's 46 item models** (a snapshot in `pack/vendor/`),
+because both mods override the same five vanilla item files and a client keeps only one
+copy — so whichever pack is on top, both mods' items show.
+
 ## Screenshots
 
 In-game, vanilla client with the pack, taken by the rig in `shotrig/`. The full set with
@@ -339,7 +375,7 @@ and only in newly generated chunks. Set `altars_per_weapon` to 0 for no limit, a
 ## Install
 
 1. Stop the server.
-2. Put `customweapons-1.0.0.jar` in `mods/`, alongside **Fabric API** (`0.141.6+1.21.11` or
+2. Put `customweapons-1.6.0.jar` in `mods/`, alongside **Fabric API** (`0.141.6+1.21.11` or
    newer). `mods/` — not `world/datapacks/`; this is a mod, not a datapack.
 3. Start the server. The console prints:
 
@@ -452,7 +488,7 @@ in the mod needs to know about it.
 
 ```bash
 JAVA_HOME=/home/tim/.gradle/jdks/eclipse_adoptium-21-amd64-linux.2 ./gradlew build
-# -> build/libs/customweapons-1.0.0.jar
+# -> build/libs/customweapons-1.6.0.jar
 ```
 
 ## Testing

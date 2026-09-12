@@ -27,6 +27,7 @@ import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 
+import dev.customweapons.Ultimate;
 import java.util.List;
 
 /**
@@ -268,5 +269,32 @@ public final class Frostbrand extends CustomWeapon {
         attacker.displayClientMessage(Component.literal(
                         String.format("Shatter  +%.1f", config.shatter_damage))
                 .withStyle(ChatFormatting.AQUA), true);
+    }
+
+    // ---- ultimate: Absolute Zero -----------------------------------------------------------------
+    public static final String ABSOLUTE_ZERO = "absolute_zero";
+
+    @Override
+    public void onUltimate(ServerPlayer player, ItemStack weapon, WeaponsConfig config) {
+        if (!Ultimate.ready(player, ABSOLUTE_ZERO, "Absolute Zero")) {
+            return;
+        }
+        ServerLevel level = (ServerLevel) player.level();
+        int hit = 0;
+        for (LivingEntity victim : Ultimate.targets(player, config.absolute_zero_radius)) {
+            if (Ultimate.strike(player, victim, config.absolute_zero_damage)) {
+                hit++;
+            }
+            CustomWeapons.stuns().stun(victim, config.absolute_zero_freeze_ticks, "Absolute Zero", true);
+            victim.setTicksFrozen(Math.max(victim.getTicksFrozen(), 200));
+            CustomWeapons.effects().play(level, "frost_hit", victim);
+        }
+        level.sendParticles(ParticleTypes.SNOWFLAKE, player.getX(), player.getY() + 1, player.getZ(), 150, 3.5, 1, 3.5, 0.02);
+        Ultimate.fired(player, this, ABSOLUTE_ZERO, config.absolute_zero_cooldown_ticks, "Absolute Zero", hit, SoundEvents.GLASS_BREAK, 0.5f, config);
+    }
+
+    @Override
+    public String ultimateLore(WeaponsConfig config) {
+        return String.format("Absolute Zero - everything within %.0f blocks frozen solid for %.0fs and %.1f true damage. %ds", config.absolute_zero_radius, config.absolute_zero_freeze_ticks / 20.0, config.absolute_zero_damage, config.absolute_zero_cooldown_ticks / 20);
     }
 }

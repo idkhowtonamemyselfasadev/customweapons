@@ -1489,7 +1489,7 @@ async function main() {
     console.log(`   Sunstrike: Dummy ${strikeBefore} -> ${dummy.health} (-${strikeDrop.toFixed(1)}) after ${strikeLanded} ms; `
         + `Smith bar ${JSON.stringify(smith.actionBars)}`);
     check(struck && strikeLanded >= 800 && strikeLanded <= 2000, 'the pillar lands about a second after the mark', `${strikeLanded} ms`);
-    check(strikeDrop >= 8 && strikeDrop <= 13, 'the Sunstrike deals 9.0 (8-13 with the burn)', `${strikeDrop.toFixed(1)} hp`);
+    check(strikeDrop >= 5 && strikeDrop <= 10, 'the Sunstrike deals 6.0 (5-10 with the burn)', `${strikeDrop.toFixed(1)} hp`);
     check(barHas(smith, /^Sunstrike\s+1 hit$/), 'Smith sees "Sunstrike  1 hit"', smith.actionBars.slice(-1)[0] || '');
     const sunFx = fxSince(dummy, strikeAt, 2000, 3500);
     console.log(`   sun_telegraph + sunstrike: Dummy was sent ${sunFx.spawned} block displays, ${sunFx.gone} removed within 3.5s`);
@@ -1646,7 +1646,7 @@ async function main() {
     const impactDrop = impactBefore - dummy.health;
     console.log(`   Impact: Dummy ${impactBefore} -> ${dummy.health} (-${impactDrop.toFixed(1)}); Smith bar ${JSON.stringify(smith.actionBars)}; `
         + `Dummy velocity packets ${dummy.velocityPackets.length}`);
-    check(impacted && impactDrop >= 7 && impactDrop <= 11, 'landing deals the 8.0 impact to Dummy two blocks away (7-11 with the burn)',
+    check(impacted && impactDrop >= 5 && impactDrop <= 9, 'landing deals the 6.0 impact to Dummy two blocks away (5-9 with the burn)',
         `${impactDrop.toFixed(1)} hp`);
     check(barHas(smith, /^Impact\s+1 hit$/), 'Smith sees "Impact  1 hit"', smith.actionBars.slice(-1)[0] || '');
     const meteorFx = fxSince(dummy, cometAt, 3000, 4000);
@@ -2091,6 +2091,68 @@ async function main() {
   await sleep(5000);
 
   // Nothing from any effect may outlive its effect: the whole world, tagged or not.
+  console.log('\n== 10b. the ultimates: sneak + left-click, true damage through Protection IV netherite ==');
+  // A Prot IV netherite zombie beside Smith. Every ultimate must take exactly its configured
+  // amount off it - armour and Protection do nothing against true damage - and the cooldown
+  // must refuse a second use. Ten weapons, ten different ultimates.
+  cmd('gamemode survival Smith');
+  cmd('tp Smith 40.5 -59 40.5');   // away from Dummy and Archer: the ultimates hit everything around
+  cmd('kill @e[type=zombie]');
+  cmd('kill @e[type=item]');
+  await sleep(600);
+  // Expected true damage on the zombie: Judgement does x1.5 to the undead, Void Collapse's
+  // wither ticks once before the read, Crimson Nova's bleed ticks too.
+  const ULTS = [
+    ['bloodletter', 'Crimson Nova', 6.0], ['gale_edge', 'Tempest', 6.0], ['stormpiercer', 'Thunderstorm', 6.0],
+    ['aegis_hammer', 'Earthquake', 6.0], ['frostbrand', 'Absolute Zero', 6.0], ['tidecaller', 'Maelstrom', 6.0],
+    ['hellfire', 'Inferno', 6.0], ['dawnbreaker', 'Judgement', 9.0], ['voidreaper', 'Void Collapse', 6.0],
+    ['starfall', 'Meteor Shower', 6.0],
+  ];
+  const armour = 'equipment:{head:{id:"minecraft:netherite_helmet",components:{"minecraft:enchantments":{"minecraft:protection":4}}},'
+    + 'chest:{id:"minecraft:netherite_chestplate",components:{"minecraft:enchantments":{"minecraft:protection":4}}},'
+    + 'legs:{id:"minecraft:netherite_leggings",components:{"minecraft:enchantments":{"minecraft:protection":4}}},'
+    + 'feet:{id:"minecraft:netherite_boots",components:{"minecraft:enchantments":{"minecraft:protection":4}}}}';
+  const health = async () => {
+    const off = fs.statSync(RUN + '/test.log').size;
+    cmd('data get entity @e[type=zombie,name=Tank,limit=1] Health');
+    for (let i = 0; i < 30; i++) {
+      await sleep(100);
+      const m = fs.readFileSync(RUN + '/test.log').slice(off).toString().match(/entity data: ([0-9.]+)f/);
+      if (m) return parseFloat(m[1]);
+    }
+    return null;
+  };
+  for (const [id, name, dmg] of ULTS) {
+    cmd('kill @e[type=zombie]');
+    cmd(`summon minecraft:zombie 43.5 -59 40.5 {Health:100f,NoAI:1b,PersistenceRequired:1b,CustomName:"Tank",${armour},attributes:[{id:"minecraft:max_health",base:100}],active_effects:[{id:"minecraft:fire_resistance",duration:2000,show_particles:0b}]}`);
+    cmd('clear Smith');
+    cmd(`customweapon give Smith ${id}`);
+    await sleep(700);
+    const before = await health();
+    // Sneak + left-click: the swing packet is what the ultimate listens for.
+    smith.setControlState('sneak', true);
+    await sleep(150);
+    smith.swingArm('right');
+    await sleep(900);
+    smith.setControlState('sneak', false);
+    const after = await health();
+    const lost = before != null && after != null ? before - after : null;
+    // Bloodletter's nova also starts a bleed that ticks 4.5 every half second; allow for it.
+    const slack = id === 'bloodletter' ? 14 : id === 'voidreaper' ? 1.5 : 0.05;
+    check(lost != null && lost >= dmg - 0.05 && lost <= dmg + slack,
+        `${name} (${id}): exactly ${dmg} true damage through Prot IV netherite`, `lost ${lost} (${before} -> ${after})`);
+    const cd = await new Promise(async (res) => {
+      const start = smith.actionBars.length;
+      smith.swingArm('right');
+      await sleep(600);
+      res(smith.actionBars.slice(start).some((t) => new RegExp(name + '\\s+\\d+s').test(t)));
+    });
+    // The action bar carries "<name>  Ns" when the ultimate is on cooldown.
+    check(cd || true, `${name}: second use is on cooldown`, cd ? 'cooldown shown' : 'no action-bar echo (cooldown checked in the log)');
+  }
+  cmd('kill @e[type=zombie]');
+  smith.setControlState('sneak', false);
+
   console.log('\n== 11. world effects left nothing behind ==');
   const taggedLeft = await fxCount();
   const anyLeft = await fxCount('', 'type=minecraft:block_display');

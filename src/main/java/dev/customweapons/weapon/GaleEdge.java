@@ -25,6 +25,9 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.phys.Vec3;
 
+import dev.customweapons.Ultimate;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import java.util.List;
 
 /**
@@ -124,6 +127,20 @@ public final class GaleEdge extends CustomWeapon {
         }
         CustomWeapons.state().grantFallImmunity(player, config.dash_fall_immunity_ticks);
         CustomWeapons.state().armMomentum(player, config.momentum_window_ticks);
+        // Whoever stands in the dash's path takes the impact (the dash alone did no damage).
+        if (config.dash_impact_damage > 0 && player.level() instanceof ServerLevel lvl) {
+            Vec3 from = player.getEyePosition();
+            Vec3 to = from.add(look.scale(6));
+            for (LivingEntity other : dev.customweapons.Targeting.around(lvl, player, from.add(look.scale(3)), 3.5)) {
+                // Within a block of the dash line.
+                Vec3 p = other.position().add(0, other.getBbHeight() * 0.5, 0);
+                double t = Math.max(0, Math.min(1, p.subtract(from).dot(to.subtract(from)) / to.subtract(from).lengthSqr()));
+                if (p.distanceTo(from.add(to.subtract(from).scale(t))) <= 1.2) {
+                    dev.customweapons.Ultimate.strike(player, other, config.dash_impact_damage);
+                    CustomWeapons.effects().play(lvl, "wind_hit", other);
+                }
+            }
+        }
         CustomWeapons.cooldowns().set(player, DASH, config.dash_cooldown_ticks, weapon);
         CustomWeapons.animations().play(player, this, config);
 
@@ -167,5 +184,33 @@ public final class GaleEdge extends CustomWeapon {
         attacker.displayClientMessage(Component.literal(
                         String.format("Momentum Strike  +%.1f", config.momentum_bonus_damage))
                 .withStyle(ChatFormatting.AQUA), true);
+    }
+
+    // ---- ultimate: Tempest ----------------------------------------------------------------------
+    public static final String TEMPEST = "tempest";
+
+    @Override
+    public void onUltimate(ServerPlayer player, ItemStack weapon, WeaponsConfig config) {
+        if (!Ultimate.ready(player, TEMPEST, "Tempest")) {
+            return;
+        }
+        ServerLevel level = (ServerLevel) player.level();
+        int hit = 0;
+        for (LivingEntity victim : Ultimate.targets(player, config.tempest_radius)) {
+            if (Ultimate.strike(player, victim, config.tempest_damage)) {
+                hit++;
+            }
+            Ultimate.fling(player, victim, config.tempest_fling, config.tempest_lift);
+            victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 60, 1));
+            CustomWeapons.effects().play(level, "wind_hit", victim);
+        }
+        level.sendParticles(ParticleTypes.GUST, player.getX(), player.getY() + 1, player.getZ(), 60, 2.5, 1, 2.5, 0.1);
+        CustomWeapons.state().grantFallImmunity(player, 100);
+        Ultimate.fired(player, this, TEMPEST, config.tempest_cooldown_ticks, "Tempest", hit, SoundEvents.BREEZE_WIND_CHARGE_BURST.value(), 0.7f, config);
+    }
+
+    @Override
+    public String ultimateLore(WeaponsConfig config) {
+        return String.format("Tempest - flings everything within %.0f blocks away for %.1f true damage. %ds", config.tempest_radius, config.tempest_damage, config.tempest_cooldown_ticks / 20);
     }
 }

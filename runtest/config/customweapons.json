@@ -65,6 +65,9 @@
   "one_weapon_per_player": false,
   "altars_enabled": true,
   "altar_spacing_chunks": 6,
+  "weapon_copies": 3,
+  "altars_per_weapon": 3,
+  "altar_near_spawn_radius": 250,
   "stat_sweep_interval_ticks": 5,
   "world_effects": true,
   "log_abilities": true

@@ -19,6 +19,14 @@ import dev.customweapons.ItemCost;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 
+import dev.customweapons.Ultimate;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LightningBolt;
+import net.minecraft.world.entity.LivingEntity;
 import java.util.List;
 
 /**
@@ -148,5 +156,37 @@ public final class Stormpiercer extends CustomWeapon {
         }
         CustomWeapons.shock().arm(arrow, config);
         CustomWeapons.animations().play(shooter, this, config);
+    }
+
+    // ---- ultimate: Thunderstorm ------------------------------------------------------------------
+    public static final String THUNDERSTORM = "thunderstorm";
+
+    @Override
+    public void onUltimate(ServerPlayer player, ItemStack weapon, WeaponsConfig config) {
+        if (!Ultimate.ready(player, THUNDERSTORM, "Thunderstorm")) {
+            return;
+        }
+        ServerLevel level = (ServerLevel) player.level();
+        int hit = 0;
+        for (LivingEntity victim : Ultimate.targets(player, config.thunderstorm_radius)) {
+            if (Ultimate.strike(player, victim, config.thunderstorm_damage)) {
+                hit++;
+            }
+            CustomWeapons.stuns().stun(victim, config.thunderstorm_stun_ticks, "Thunderstorm");
+            victim.addEffect(new MobEffectInstance(MobEffects.GLOWING, 100, 0));
+            // The bolt is for show: it is set to do no fire and no damage of its own.
+            LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(level, net.minecraft.world.entity.EntitySpawnReason.TRIGGERED);
+            if (bolt != null) {
+                bolt.snapTo(victim.getX(), victim.getY(), victim.getZ());
+                bolt.setVisualOnly(true);
+                level.addFreshEntity(bolt);
+            }
+        }
+        Ultimate.fired(player, this, THUNDERSTORM, config.thunderstorm_cooldown_ticks, "Thunderstorm", hit, SoundEvents.LIGHTNING_BOLT_THUNDER, 0.8f, config);
+    }
+
+    @Override
+    public String ultimateLore(WeaponsConfig config) {
+        return String.format("Thunderstorm - lightning on everything within %.0f blocks: %.1f true damage and a stun. %ds", config.thunderstorm_radius, config.thunderstorm_damage, config.thunderstorm_cooldown_ticks / 20);
     }
 }

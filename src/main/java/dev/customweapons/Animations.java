@@ -32,11 +32,14 @@ public final class Animations {
     private static final class Playing {
         final String weaponId;
         final int frames;
+        /** 0 for the ability animation, {@code frames} for the ultimate's: the pack has two sets. */
+        final int offset;
         int frame;
 
-        Playing(String weaponId, int frames) {
+        Playing(String weaponId, int frames, int offset) {
             this.weaponId = weaponId;
             this.frames = frames;
+            this.offset = offset;
             this.frame = 1;
         }
     }
@@ -49,8 +52,20 @@ public final class Animations {
         if (frames <= 0) {
             return;
         }
-        Playing anim = new Playing(weapon.id(), frames);
+        Playing anim = new Playing(weapon.id(), frames, 0);
         if (setFrame(player, anim.weaponId, anim.frame)) {
+            playing.put(player.getUUID(), anim);
+        }
+    }
+
+    /** The ultimate's animation: the pack's second set of poses, frames 11..20. */
+    public void playUltimate(ServerPlayer player, CustomWeapon weapon, WeaponsConfig config) {
+        int frames = config.animation_ticks;
+        if (frames <= 0) {
+            return;
+        }
+        Playing anim = new Playing(weapon.id(), frames, frames);
+        if (setFrame(player, anim.weaponId, anim.offset + anim.frame)) {
             playing.put(player.getUUID(), anim);
         }
     }
@@ -74,7 +89,7 @@ public final class Animations {
                 it.remove();
                 continue;
             }
-            if (!setFrame(player, anim.weaponId, anim.frame)) {
+            if (!setFrame(player, anim.weaponId, anim.offset + anim.frame)) {
                 it.remove();
             }
         }
