@@ -1,0 +1,475 @@
+== syncing customweapons to 192.168.2.145 ==
+== running on 192.168.2.145: env SKIP_BUILD=1 bash runtest/test.sh ==
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+== mod jar: 204710 Sep 12 23:04 ==
+== booting 1.21.11 Fabric server on port 25603 ==
+[23:04:35] [Server thread/INFO]: CustomWeapons ready: 10 weapons craftable, 0 altars known
+
+== recipes loaded without error ==
+   PASS  no recipe parse errors in the server log
+== connecting three vanilla clients ==
+   Smith (0.5, -60, 0.5)
+   Dummy (2.5, -60, 0.5), 60 hp
+
+== 1. crafting the Bloodletter in a crafting table ==
+   PASS  recipe produces a result  netherite_sword x1
+   crafted item: {"name":"netherite_sword","customName":"{\"type\":\"compound\",\"value\":{\"color\":{\"type\":\"string\",\"value\":\"dark_red\"},\"text\":{\"type\":\"string\",\"value\":\"Bloodletter\"},","components":["custom_data","custom_name","lore","attribute_modifiers","llama/variant",111]}
+   PASS  crafted weapon is named and stamped by the server
+
+== 2. /customweapon give, and what the client receives ==
+   {"name":"netherite_sword","customName":"{\"type\":\"compound\",\"value\":{\"color\":{\"type\":\"string\",\"value\":\"dark_red\"},\"text\":{\"type\":\"string\",\"value\":\"Bloodletter\"},","components":["custom_data","custom_name","lore","attribute_modifiers","llama/variant",111]}
+   PASS  display name reaches the client
+   PASS  attribute modifiers reach the client
+   PASS  lore reaches the client
+
+== 3. Bloodletter bleed ==
+   Dummy 60 -> 34.5 after three swings
+   Dummy 34.5 -> 31.5 with nobody touching it
+   PASS  bleed keeps damaging after the attacker stops  3.0 hp
+   PASS  bleed ends on its own  settled at 31.5
+   PASS  attacker sees the bleed stacks on the action bar  Bleed x3  (3.0s)
+   blood_slash: Dummy was sent 18 block displays within 1s of the first swing (27 over the section), 18 of them removed within 1.5s
+   PASS  a Bloodletter hit spawns the blood_slash displays (>= 9)  18
+   PASS  every blood_slash display is removed again within 1.5s  18/18
+   held-slot updates: 33; frames on the wire: 1,2,3,4,5,6,7,8,9,10,0,1,2,3,4,5,6,7,8,9,10,0,1,2,3,4,5,6,7,8,9,10,0
+   last update at +1743ms; prismarine-item's custom_model_data: []
+   PASS  the held sword steps through animation frames after a hit  10 distinct frames within 0.6s: 1,2,3,4,5,6,7,8,9,10
+   PASS  every frame update has the expected layout
+   PASS  the frame is cleared again once the animation ends  last update frame=0 at +1743ms
+   -- switching away mid-animation
+   frames on the wire: 1,2,3,0  (switched away at +101ms)
+   PASS  the animation had started before the switch
+   PASS  the frame is cleared off the sword once it leaves the main hand  last update frame=0 at +284ms
+   data get: custom_model_data": {strings: ["cw:bloodletter"]}
+   PASS  the server's copy of the sword carries no frame float  custom_model_data": {strings: ["cw:bloodletter"]}
+
+== 3c. a bleed tick that kills its victim ==
+   PASS  a zombie on five health stands beside Smith
+   PASS  the zombie died  gone
+   PASS  no ConcurrentModificationException in the log
+   PASS  the server is still answering commands
+
+== 4. an anvil-renamed sword must not bleed ==
+   PASS  renamed sword applies no bleed
+
+== 5. Gale Edge dash and Momentum Strike ==
+   moved 0.00 blocks; velocity packets: 2
+   launch velocity {"entityId":1,"velocity":{"x":0,"y":0.2999450650064093,"z":-1.4999694805591162}}
+   PASS  the client is sent a launch velocity  {"x":0,"y":0.2999450650064093,"z":-1.4999694805591162}
+   PASS  the dash reports on the action bar
+   wind_dash: Smith was sent 16 block displays, 16 removed within 1.5s
+   PASS  the dash spawns the wind_dash displays (>= 16)  16
+   wind_hit: Dummy was sent 7 block displays, 7 removed within 1.5s
+   PASS  the Momentum Strike spawns the wind_hit displays (>= 7)  7
+   Dummy 60 -> 49
+   PASS  the first hit after a dash is a Momentum Strike  Momentum Strike  +4.0
+   PASS  a second dash on cooldown is refused with the time left  Dash  5.2s
+
+== 6. Aegis Hammer ground slam ==
+   PASS  a slam in mid-air does nothing
+   slam_wave: Smith was sent 31 block displays, 31 removed within 1.5s
+   PASS  the slam spawns the slam_wave displays (>= 31)  31
+   Dummy 60 -> 52
+   PASS  slam damages a nearby player  8.0 hp
+   PASS  slam applies an effect to the target  ["1"]
+
+== 7. Stormpiercer shock ==
+   {"name":"bow","customName":"{\"type\":\"compound\",\"value\":{\"color\":{\"type\":\"string\",\"value\":\"blue\"},\"text\":{\"type\":\"string\",\"value\":\"Stormpiercer\"},\"bo","components":["custom_data","custom_name","lore","enchantment_glint_override","custom_model_data","unbreakable"]}
+   after /enchant: {"name":"bow","customName":"{\"type\":\"compound\",\"value\":{\"color\":{\"type\":\"string\",\"value\":\"blue\"},\"text\":{\"type\":\"string\",\"value\":\"Stormpiercer\"},\"bo","components":["custom_data","custom_name","lore","enchantment_glint_override","custom_model_data","unbreakable"]}
+   PASS  an enchantment forced onto the Stormpiercer does not stick  []
+   PASS  the Stormpiercer is unbreakable (server-side component)  [23:05:32] [Server thread/INFO]: Archer has the following entity data: {}
+   partial draw first (must not shock)
+   full draw, shock ready, attempt 1
+   PASS  Dummy is told "Stunned" on its action bar  ["Stunned"]
+   PASS  Dummy carries Slowness VII during the stun  effects on the client: {"1":{"id":1,"amplifier":6,"duration":40},"3":{"id":3,"amplifier":2,"duration":40},"23":{"id":23,"amplifier":0,"duration":120}}
+   pinned at (3.5, -60, 0.5), now at (3.5, -60, 0.5)
+   stunned walk attempt: max drift 0.059, end drift 0.000 blocks; 9 position packets from the server; server sees Dummy within 0.5: 1
+   PASS  while stunned Dummy cannot walk away (stays within 0.5 of where it was hit)  max 0.059, end 0.000
+   PASS  the server also has Dummy within 0.5 of the spot mid-stun  count 1
+   empty-hand hit on the stunned Dummy 1660 ms after the shock (inside the 2 s stun): Dummy 44 -> 43; 4 velocity packets, strongest 0.400 blocks/tick [{"x":0,"y":0,"z":0},{"x":0,"y":0,"z":0},{"x":0,"y":0,"z":0}]
+   PASS  the melee hit on the stunned Dummy lands  44 -> 43
+   PASS  the shock stun is not rigid: a melee hit on the stunned Dummy still sends knockback (velocity > 0.1)  0.400 blocks/tick
+   after the stun: slowness on the client: null
+   PASS  once the stun ends Dummy can walk again (1 s forward > 0.8 blocks)  4.06 blocks
+   Dummy 60 -> 43 (-16.0); Archer bar ["Shock"]
+   storm_cage: Dummy was sent 5 block displays, 5 removed within 2s; end_rod displays on the server while it stood: 4
+   PASS  a fully drawn arrow lands and shocks
+   PASS  the stun was observed on the shock hit
+   PASS  with the shock ready a full draw deals 10 (arrow) + 6 (shock)  16.0 hp
+   PASS  the shooter sees the shock land  Shock
+   PASS  the shock spawns the storm_cage displays (>= 5)  5
+   PASS  the storm_cage has an end_rod display while it stands  4 on the server
+   full draw, shock on cooldown, attempt 1
+   Dummy 60 -> 50 (-10.0); Archer bar ["Shock  24s"]
+   storm_cage: Dummy was sent 0 block displays, 0 removed within 2s; end_rod displays on the server while it stood: null
+   PASS  a full draw inside the cooldown still lands
+   PASS  inside the cooldown a full draw is the arrow alone: 10  10.0 hp
+   PASS  the shooter is shown the shock cooldown instead  Shock  24s
+
+== 8. Frostbrand, Stormpiercer execution, Tidecaller, Hellfire ==
+   -- Frostbrand
+   {"name":"iron_sword","customName":"{\"type\":\"compound\",\"value\":{\"color\":{\"type\":\"string\",\"value\":\"white\"},\"text\":{\"type\":\"string\",\"value\":\"Frostbrand\"},\"bol","components":["custom_data","custom_name","lore","attribute_modifiers","sheep/color",111]}
+   PASS  the Frostbrand reaches the client named
+   Dummy 60 -> 40.79999542236328
+   ["Frost  50%","Frost  82%","Shatter  +8.0","Frost  4.4s","Frost  3.8s"]
+   PASS  each hit reports the frost build-up on the action bar
+   PASS  the frozen target shatters  Shatter  +8.0
+   PASS  the Frostbrand hurts  19.2 hp
+   frost_hit: Dummy was sent 6 block displays within 1s of the first swing, 6 removed within 1.5s; frost_shatter: 5 around the shatter; ice-cube displays on the server just after it: 1
+   PASS  a Frostbrand hit spawns the frost_hit displays (>= 3)  6
+   PASS  the shatter spawns the frost_shatter displays (>= 5)  5
+   PASS  an ice block display stands on the server while the cube is up  1
+   PASS  no tagged displays remain 3s after the shatter  0 on the server
+   -- Frostbrand Ice Beam
+   Smith at (0.5, -60, 0.5), Dummy at (6.5, -60, 0.5) (6.0 blocks), 60 hp, effects {}
+   PASS  the ice beam hits Dummy within 1 s (health drops)
+   PASS  Dummy is told "Frozen" on its action bar  ["Frozen"]
+   PASS  Dummy carries Slowness VII while frozen  effects on the client: {"1":{"id":1,"amplifier":6,"duration":60},"3":{"id":3,"amplifier":2,"duration":60}}
+   Dummy 60 -> 54 (-6.0); Smith bar ["Ice Beam  frozen Dummy"]; Dummy bar ["Frozen"]
+   PASS  the ice beam deals 6.0 (no armour, no effects)  6.0 hp
+   PASS  Smith sees "Ice Beam" on the action bar  Ice Beam  frozen Dummy
+   frost_beam: Dummy was sent 12 block displays within 1s (Smith 12), 0 of them removed within 2s
+   PASS  the beam spawns the frost_beam displays (>= 5)  12
+   frozen at (6.5, -60, 0.5), now at (6.5196, -60, 0.4999999999999943); max drift 0.039, end drift 0.020; 17 position packets from the server; server sees Dummy within 0.5: 1
+   PASS  while frozen Dummy cannot walk away for 2.5 s (stays within 0.5 of the spot)  max 0.039, end 0.020
+   PASS  the server also has Dummy within 0.5 of the spot mid-freeze  count 1
+   after the freeze: slowness on the client: null
+   PASS  once the freeze ends Dummy can walk again (1 s forward > 0.8 blocks)  4.06 blocks
+   second use inside the cooldown: Smith bar ["Ice Beam  3.5s"]; Dummy 53 -> 53
+   PASS  a second beam on cooldown is refused with the time left  Ice Beam  3.5s
+   PASS  the refused beam does no damage  53 -> 53
+   into the sky: log ["ABILITY frostbeam player=Smith victim=miss"]; Smith bar ["Ice Beam"]; Dummy 53 -> 53
+   PASS  a beam into the sky is logged as victim=miss  ["ABILITY frostbeam player=Smith victim=miss"]
+   PASS  the missed beam changes nothing on Dummy  53 -> 53
+   PASS  a missed beam still reports "Ice Beam"  ["Ice Beam"]
+   -- Ice Beam rigid freeze
+   PASS  the ice beam hits Dummy again for the rigid-freeze probe  60 -> 57.599998474121094
+   frozen at (6.5, -60, 0.5) (Smith sees (6.5, -60, 0.5)); two Frostbrand hits while frozen: health drops [6.4,3.2]; max displacement own 0.000, seen by Smith 0.000; 0 position packets; 32 velocity packets, strongest 0.000 blocks/tick, 2.256s into the freeze
+   PASS  both Frostbrand hits on the frozen Dummy land  [6.400001525878906,3.200000762939453]
+   PASS  a frozen Dummy takes no knockback: it stays within 0.15 of the frozen spot through two hits  own 0.000, seen 0.000
+   PASS  no knockback velocity reaches the frozen Dummy (every velocity packet is zero)  strongest 0.000 blocks/tick over 32 packets
+   control hit after the thaw: Dummy 47.999996185302734 -> 44.79999542236328; max displacement own 0.000, seen by Smith 0.000; 1 velocity packets, strongest 0.539 blocks/tick
+   PASS  the control hit after the thaw lands  47.999996185302734 -> 44.79999542236328
+   PASS  control: once the ice is gone the same hit knocks Dummy back (> 0.3 blocks or a velocity packet)  moved 0.000, velocity 0.539
+   PASS  a husk stands 5 blocks ahead of Smith
+   PASS  the ice beam freezes the husk (logged victim=Husk)  ["Ice Beam  frozen Husk"]
+   husk stood at (5.500, -60.000, 0.500), frozen at (5.500, -60.000, 0.500) (0.000 apart)
+   PASS  the server still has the husk after the beam
+   frozen husk, one Frostbrand hit: hit from (3.5, -60, 0.5) (2.00 blocks); stood at (5.500, -60.000, 0.500), last on the server at (5.500, -60.000, 0.500) (914 ms): displacement 0.001, max 0.001 over 15 samples; client saw it removed 0.96s after the hit
+   server trace (ms: displacement): 51:0.00 102:0.00 154:0.00 206:0.00 257:0.00 308:0.00 359:0.00 410:0.00 461:0.00 511:0.00 562:0.00 613:0.00 713:0.00 813:0.00 914:0.00
+   PASS  one Frostbrand hit kills the frozen husk (gone within 2.5 s)
+   PASS  the frozen husk dies where it stood: the killing blow moves it by no more than 0.3  last 0.001, max 0.001
+   PASS  a second, unfrozen husk stands in the same place
+   PASS  the server has the second husk
+   unfrozen husk, one Frostbrand hit: hit from (3.5, -60, 0.5) (2.00 blocks); stood at (5.500, -60.000, 0.500), last on the server at (7.489, -60.000, 0.500) (965 ms): displacement 1.989, max 1.989 over 18 samples; client saw it removed 1.00s after the hit
+   server trace (ms: displacement): 102:0.54 152:1.16 203:1.37 254:1.51 304:1.60 355:1.65 406:1.68 456:1.71 507:1.79 558:1.88 609:1.93 660:1.96 711:1.98 762:1.98 813:1.99 864:1.99 915:1.99 965:1.99
+   PASS  one Frostbrand hit kills the unfrozen husk too
+   PASS  control: the unfrozen husk is knocked more than 0.3 by the killing blow  max 1.989
+   -- Ice Beam default cooldown (config key removed, jar default)
+   PASS  the harness config pins frost_beam_cooldown_ticks to 160
+   fresh Frostbrand lore lines mentioning a cooldown: ["It takes 6.0 and is held in ice for 3.0s, cooldown 30s","Cooldown 5s after a shatter - the frost thaws if you stop swinging"]
+   PASS  a Frostbrand given on the jar default reads "cooldown 30s" in its Ice Beam lore line  It takes 6.0 and is held in ice for 3.0s, cooldown 30s | Cooldown 5s after a shatter - the frost thaws if you stop swinging
+   two uses back to back on the default: Smith bar ["Ice Beam","Ice Beam  29.3s"]
+   PASS  on the jar default a second beam is refused with 20+ s left (600 ticks = 30 s)  Ice Beam  29.3s
+   -- Stormpiercer execution
+   creeper, attempt 1
+   creeper is gone after 1105ms
+   PASS  a fully drawn Stormpiercer arrow executes a creeper
+   PASS  the shooter is told it was an execution  Shock  (executed)
+   -- Tidecaller
+   throw, attempt 1
+   {"name":"trident","customName":"{\"type\":\"compound\",\"value\":{\"color\":{\"type\":\"string\",\"value\":\"dark_aqua\"},\"text\":{\"type\":\"string\",\"value\":\"Tidecaller\"},","components":["custom_data","custom_name","lore","attribute_modifiers",116,105]}
+   PASS  the Tidecaller reaches the client named
+   Dummy velocity packets: 0; action bar "Harpoon"
+   tide_splash + line: Dummy was sent 22 block displays, 22 removed within 1.5s
+   PASS  the harpoon spawns the splash and the bead line (>= 22 displays)  22
+   PASS  a thrown Tidecaller hit yanks the target toward the thrower
+   PASS  the harpoon reports on the action bar
+   -- Hellfire
+   {"name":"crossbow","customName":"{\"type\":\"compound\",\"value\":{\"color\":{\"type\":\"string\",\"value\":\"red\"},\"text\":{\"type\":\"string\",\"value\":\"Hellfire\"},\"bold\":{","components":["custom_data","custom_name","lore","enchantment_glint_override","custom_model_data"]}
+   PASS  the Hellfire reaches the client named
+   bolt, attempt 1
+   Dummy 60 -> 60; velocity packets 0; ["Hellfire"]
+   bolt, attempt 2
+   Dummy 60 -> 46.696502685546875; velocity packets 1; ["Hellfire"]
+   hell_burst: Dummy was sent 17 block displays, 0 removed within 1.5s
+   PASS  the explosion spawns the hell_burst displays (>= 17)  17
+   PASS  the armed bolt reports on the action bar
+   PASS  the Hellfire bolt hurts the target it was fired at
+   PASS  no tagged displays remain 6.5s after the explosion  0 on the server
+   -- Hellfire on the ground
+   ground bolt: Dummy 60 -> 59.599998474121094; velocity packets 1; Archer bar ["Hellfire"]
+   PASS  the server is still ticking after a Hellfire bolt landed on the ground beside Dummy
+   PASS  the ground blast still reached Dummy
+   section 8 took 96.9s
+   full draws fired with the shock ready: 2
+
+== 8b. Dawnbreaker, Voidreaper, Starfall, Exsanguinate, Stagger ==
+   -- Dawnbreaker
+   {"name":"golden_sword","customName":"{\"type\":\"compound\",\"value\":{\"color\":{\"type\":\"string\",\"value\":\"gold\"},\"text\":{\"type\":\"string\",\"value\":\"Dawnbreaker\"},\"bol","components":["custom_data","custom_name","lore","attribute_modifiers","cat/variant",119,110]}
+   PASS  the Dawnbreaker reaches the client named
+   PASS  the Dawnbreaker is unbreakable (server-side component)  [23:07:26] [Server thread/INFO]: Smith has the following entity data: {}
+   one Dawnbreaker hit: Dummy 60 -> 49 (-11.0); Smith bar ["Solar Brand  +2.0"]; Dummy on fire flag 1
+   PASS  a daytime hit lands 9.0 + 2.0 Solar Brand (10-15 with the burn)  11.0 hp
+   PASS  Smith sees "Solar Brand  +2.0"  Solar Brand  +2.0
+   PASS  the mark reports "Sunstrike" at once  ["Sunstrike"]
+   PASS  nothing lands during the one-second telegraph  58 -> 58
+   Sunstrike: Dummy 58 -> 51 (-7.0) after 1056 ms; Smith bar ["Sunstrike","Sunstrike  1 hit"]
+   PASS  the pillar lands about a second after the mark  1056 ms
+   PASS  the Sunstrike deals 6.0 (5-10 with the burn)  7.0 hp
+   PASS  Smith sees "Sunstrike  1 hit"  Sunstrike  1 hit
+   sun_telegraph + sunstrike: Dummy was sent 31 block displays, 11 removed within 3.5s
+   PASS  the telegraph and the pillar spawn their displays (>= 8)  31
+   PASS  a second Sunstrike inside the cooldown is refused with the time left  ["Sunstrike  13.5s"]
+   -- Voidreaper
+   {"name":"netherite_hoe","customName":"{\"type\":\"compound\",\"value\":{\"color\":{\"type\":\"string\",\"value\":\"dark_purple\"},\"text\":{\"type\":\"string\",\"value\":\"Voidreaper\"","components":["custom_data","custom_name","lore","attribute_modifiers",118,111]}
+   PASS  the Voidreaper reaches the client named
+!! FAIL  the Voidreaper takes Sharpness V  no enchantments component
+   Rift: Smith (0.5, -60, 0.5) -> (5, -60, 0.49999999999999983); 1.50 from Dummy at (6.5, -60, 0.5); Smith bar ["Rift  behind Dummy"]
+   PASS  the Rift moves Smith (a teleport, > 3 blocks)  4.50
+   PASS  Smith lands right next to Dummy (<= 2.3 blocks)  1.50
+   PASS  and behind it: Dummy faces +x, Smith is on the -x side  Smith x 5.00, Dummy x 6.50
+   PASS  Smith sees "Rift  behind Dummy"  Rift  behind Dummy
+   rift_open x2: Dummy was sent 18 block displays, 0 removed within 2s
+   PASS  both rift tears spawn their displays (>= 8)  18
+   backstab: Dummy 58 -> 39 (-19.0); Smith bar ["Backstab  +6.0"]; wither on the client: {"id":19,"amplifier":0,"duration":40}
+   PASS  the backstab lands 10.0 + 6.0 (15-20 with the wither tick)  19.0 hp
+   PASS  Smith sees "Backstab  +6.0"  Backstab  +6.0
+   PASS  Dummy carries Wither after the hit  {"19":{"id":19,"amplifier":0,"duration":40}}
+   PASS  the backstab is spent: the next hit is a plain one  []
+   zombie at (1.5, -59, 2.5), Smith at (0.5, -59, 0.5) (2.24 blocks), Smith holding netherite_hoe
+   harvest: Smith 10 -> 14; Smith bar ["Soul Harvest  +4.0"]
+   PASS  the kill heals Smith 4.0 (Soul Harvest)  4.0
+   PASS  Smith sees "Soul Harvest  +4.0"  Soul Harvest  +4.0
+   -- Starfall
+   {"name":"mace","customName":"{\"type\":\"compound\",\"value\":{\"color\":{\"type\":\"string\",\"value\":\"light_purple\"},\"text\":{\"type\":\"string\",\"value\":\"Starfall\"}","components":["custom_data","custom_name","lore","attribute_modifiers",115,116]}
+   PASS  the Starfall reaches the client named
+   Comet: velocity packets 2, last {"entityId":1,"velocity":{"x":0,"y":1.4999694805591162,"z":0}}; Smith bar ["Comet"]
+   PASS  the Comet sends an upward velocity (y > 0.5 blocks/tick)  {"x":0,"y":1.4999694805591162,"z":0}
+   PASS  Smith sees "Comet"  Comet
+   Impact: Dummy 60 -> 53 (-7.0); Smith bar ["Comet","Impact  1 hit"]; Dummy velocity packets 14
+   PASS  landing deals the 6.0 impact to Dummy two blocks away (5-9 with the burn)  7.0 hp
+   PASS  Smith sees "Impact  1 hit"  Impact  1 hit
+   comet_launch + meteor_impact: Dummy was sent 58 block displays, 24 removed within 4s
+   PASS  the launch and the impact spawn their displays (>= 12)  58
+   PASS  a second Comet inside the cooldown is refused with the time left  ["Comet  18.5s"]
+   -- Exsanguinate
+   PASS  with nothing bleeding it says so and costs nothing  ["Exsanguinate  nothing bleeding"]
+   Exsanguinate: Dummy 44.5 -> 38.5 (-6.0) ; Smith bar ["Exsanguinate  1 burst, +4.0"]
+   PASS  the burst lands the rest of the bleed at once (>= 5 within 0.8 s)  6.0 hp
+   PASS  Smith sees "Exsanguinate  1 burst, +4.0" (two stacks)  Exsanguinate  1 burst, +4.0
+   blood_burst: Dummy was sent 16 block displays, 0 removed within 2s
+   PASS  the burst spawns its displays (>= 4)  16
+   PASS  the bleed is over after the burst (no more ticks)  38.5 -> 38.5
+   -- Stagger
+   PASS  hit 1 of 3 does not stagger  []
+   PASS  hit 2 of 3 does not stagger  []
+   Stagger: Smith bar ["Stagger"]; Dummy bar ["Staggered"]
+   PASS  the third hit staggers: Dummy is told "Staggered"  ["Staggered"]
+   PASS  Smith sees "Stagger"  ["Stagger"]
+
+== 9. one of each weapon on the world ==
+   PASS  the first Bloodletter is handed out
+   PASS  the whole server is told a legendary was forged  Smith has forged Bloodletter - 1 of 3 on this world.
+   PASS  and which of the three it was  Smith has forged Bloodletter - 1 of 3 on this world.
+   PASS  the second and third Bloodletters are handed out  2 sword(s)
+   PASS  the third is announced as the last  Dummy has forged Bloodletter - 3 of 3 on this world.
+   PASS  a fourth Bloodletter cannot be given out  2 sword(s)
+   crafting a duplicate...
+   PASS  recipe produces a result  netherite_sword x1
+   {"name":"netherite_sword","customName":null,"components":[]}
+   PASS  a crafted duplicate reverts to a plain netherite sword  1 sword(s), plain: true
+   PASS  the duplicate crafter gets their materials back  ["wither_skeleton_skull","ghast_tear","netherite_ingot","netherite_sword"]
+   PASS  and is told why  Bloodletter has already been forged by Smith, Dummy and Dummy. There are only 3 on this world; your materials have been returned.
+   PASS  after /customweapon unclaim one more can be forged  1 sword(s)
+
+== 9b. one legendary per player ==
+   Smith carries ["iron_sword"]
+   PASS  the legendary they already carried is the one they keep  1 legendary item(s): iron_sword
+   PASS  the second one left the inventory
+   PASS  and is lying on the ground at their feet  2 item entity(ies) within 4 blocks
+   PASS  and they are told why  You can carry only one legendary at a time. Gale Edge is on the ground; drop Frostbrand first if you want to swap.
+
+== 9. weapon altars ==
+   PASS  the altar structure was built  (40, -57, 40)
+   {"deepslate_bricks":485,"deepslate_tiles":196,"soul_lantern":8,"iron_chain":16,"soul_campfire":4,"pillar":68}
+   PASS  the temple is a real build, not a plinth  681 structural blocks
+   PASS  the colonnade carries its hanging lanterns  8 lanterns, 16 chains
+   PASS  four braziers ring the sanctum  4
+   PASS  the pillars are in the weapon's colours  68 red nether bricks
+   5 label entities on this altar
+   [32,null,{"type":"compound","value":{"color":{"type":"string","value":"gray"},"extra":{"type":"list","value":{"type":"compound","value":[{"color":{"type":"string","value":"dark_red"},"text":{"type":"string","value":"Bloodletter"},"bold":{"type":"byte","value":1},"italic":{"type":"byte","value":0}}]}},"text":{"type":"string","value":"✦ Altar of the "}}},true,true,true,null,null,null,20,null,null,nu
+   PASS  the altar carries exactly one label per line  5 armour stands within 3.5 blocks
+   PASS  the label names the altar
+   PASS  the label lists the price, at the new counts
+   ["The altar forges Bloodletter","  need 1x Netherite Sword","  need 3x Wither Skeleton Skull","  need 4x Ghast Tear","  need 1x Netherite Ingot"]
+   PASS  an empty-handed click lists what is missing
+   PASS  nothing is forged without the materials
+   PASS  two skulls out of three is refused, and asks for one more    need 1x Wither Skeleton Skull
+   PASS  the altar block cannot be mined  lodestone
+   temple block red_nether_bricks at (47, -59, 47) (altar at (40, -57, 40))
+   pillar dig refused: Digging aborted
+   PASS  a temple block (red_nether_bricks) cannot be mined either (server-side)  Test passed
+   PASS  TNT on the pedestal does not remove the altar  lodestone
+   floor under the altar after TNT: deepslate_bricks
+   ["Smith has forged Bloodletter - 1 of 3 on this world.","The altar forges Bloodletter","The temple crumbles behind you."]
+   PASS  the altar forges the weapon  1 Bloodletter(s)
+   PASS  the altar takes the materials
+   PASS  the player is told the temple is gone  The altar forges Bloodletter | The temple crumbles behind you.
+   PASS  the used altar is gone  air
+   PASS  the whole temple above the ground is gone  0 temple block(s) left
+   PASS  its labels are gone too  0 stand(s)
+   ground where the floor was: grass_block
+   PASS  the foundation is covered by the ground beside it  grass_block
+   PASS  the ground where the temple stood can be mined again (server-side)  Test passed
+   PASS  temple 2 stands where the first one stood  lodestone
+   PASS  temple 2 forges Bloodletter 2  2 Bloodletter(s)
+   PASS  temple 2 is gone after its forging  air
+   PASS  temple 3 stands where the first one stood  lodestone
+   PASS  temple 3 forges Bloodletter 3  3 Bloodletter(s)
+   PASS  temple 3 is gone after its forging  air
+   PASS  the third forging is announced as the last  Smith has forged Bloodletter - 3 of 3 on this world.
+   PASS  a fourth temple can still be placed by command  lodestone
+   ["The altar is spent. Bloodletter was forged by Smith, Smith and Smith; there will be no more. The temple crumbles."]
+   PASS  a spent altar names whoever forged the weapons  The altar is spent. Bloodletter was forged by Smith, Smith and Smith; there will be no more. The temple crumbles.
+   PASS  a spent altar takes nothing
+   PASS  and forges nothing  3 Bloodletter(s)
+   PASS  a spent altar crumbles too  air
+
+== 10. altars generate in new chunks ==
+
+== 10b. the ultimates: sneak + left-click, true damage through Protection IV netherite ==
+   PASS  Crimson Nova (bloodletter): exactly 6 true damage through Prot IV netherite  lost 7.6200000000000045 (100 -> 92.38)
+   PASS  Crimson Nova: second use is on cooldown  no action-bar echo (cooldown checked in the log)
+   PASS  Tempest (gale_edge): exactly 6 true damage through Prot IV netherite  lost 6 (100 -> 94)
+   PASS  Tempest: second use is on cooldown  no action-bar echo (cooldown checked in the log)
+   PASS  Thunderstorm (stormpiercer): exactly 6 true damage through Prot IV netherite  lost 6 (100 -> 94)
+   PASS  Thunderstorm: second use is on cooldown  no action-bar echo (cooldown checked in the log)
+   PASS  Earthquake (aegis_hammer): exactly 6 true damage through Prot IV netherite  lost 6 (100 -> 94)
+   PASS  Earthquake: second use is on cooldown  no action-bar echo (cooldown checked in the log)
+   PASS  Absolute Zero (frostbrand): exactly 6 true damage through Prot IV netherite  lost 6 (100 -> 94)
+   PASS  Absolute Zero: second use is on cooldown  no action-bar echo (cooldown checked in the log)
+   PASS  Maelstrom (tidecaller): exactly 6 true damage through Prot IV netherite  lost 6 (100 -> 94)
+   PASS  Maelstrom: second use is on cooldown  no action-bar echo (cooldown checked in the log)
+   PASS  Inferno (hellfire): exactly 6 true damage through Prot IV netherite  lost 6 (100 -> 94)
+   PASS  Inferno: second use is on cooldown  no action-bar echo (cooldown checked in the log)
+   PASS  Judgement (dawnbreaker): exactly 9 true damage through Prot IV netherite  lost 9 (100 -> 91)
+   PASS  Judgement: second use is on cooldown  no action-bar echo (cooldown checked in the log)
+   PASS  Void Collapse (voidreaper): exactly 6 true damage through Prot IV netherite  lost 6.359999999999999 (100 -> 93.64)
+   PASS  Void Collapse: second use is on cooldown  no action-bar echo (cooldown checked in the log)
+   PASS  Meteor Shower (starfall): exactly 6 true damage through Prot IV netherite  lost 6 (100 -> 94)
+   PASS  Meteor Shower: second use is on cooldown  no action-bar echo (cooldown checked in the log)
+
+== 11. world effects left nothing behind ==
+   block displays sent to each client over the run: Smith 564 spawned/564 removed, Dummy 564 spawned/564 removed, Archer 440 spawned/440 removed
+   PASS  no tagged effect displays remain at the end  0
+   PASS  no block displays of any kind remain at the end  0
+   PASS  Smith was told to remove every effect display it was sent  564/564
+   PASS  Dummy was told to remove every effect display it was sent  564/564
+   PASS  Archer was told to remove every effect display it was sent  440/440
+
+=========== 1 BOT CHECK(S) FAILED ===========
+
+=========== SERVER-SIDE ASSERTIONS ===========
+   PASS  bleed applied and reached three stacks  (2 matching lines)
+   PASS  bleed ticked repeatedly  (24 matching lines)
+   PASS  a bleed tick killed its victim without a crash  (1 matching lines)
+   PASS  the dash fired  (1 matching lines)
+   PASS  the Momentum Strike fired  (1 matching lines)
+   PASS  the slam fired and found a target  (1 matching lines)
+   PASS  exactly one arrow armed per ready full draw (2 fired), none for the partial or cooldown ones  (2 matching lines)
+   PASS  the shock landed  (2 matching lines)
+   PASS  the shock on Dummy was the +6.0 bonus alone, nothing chained  (1 matching lines)
+   PASS  the shock stunned the target  (1 matching lines)
+   PASS  the shock executed a creeper  (1 matching lines)
+   PASS  frost stacked on a target  (7 matching lines)
+   PASS  the shatter fired  (2 matching lines)
+   PASS  the ice beam froze the target (twice: the walk probe and the rigid-freeze probe)  (2 matching lines)
+   PASS  the ice beam froze the husk  (1 matching lines)
+   PASS  the ice beam can miss  (2 matching lines)
+   PASS  the harpoon fired  (1 matching lines)
+   PASS  a daytime Dawnbreaker hit added the Solar Brand  (1 matching lines)
+   PASS  the Sunstrike landed on Dummy  (1 matching lines)
+   PASS  the Rift fired on Dummy  (1 matching lines)
+   PASS  the backstab landed  (1 matching lines)
+   PASS  the Soul Harvest fed the wielder  (1 matching lines)
+   PASS  the Comet launched  (1 matching lines)
+   PASS  the landing was the impact and hit Dummy  (1 matching lines)
+   PASS  the Exsanguinate burst one bleed  (1 matching lines)
+   PASS  the Stagger stunned Dummy  (1 matching lines)
+   PASS  a Hellfire bolt was armed  (3 matching lines)
+   PASS  the Hellfire bolt exploded  (2 matching lines)
+   PASS  a Hellfire bolt detonated on the ground (the crash path)  (1 matching lines)
+   PASS  no ConcurrentModificationException anywhere  (0 matching lines)
+   PASS  the one-legendary rule dropped the second weapon, keeping the first  (1 matching lines)
+   PASS  the altar forged a weapon  (3 matching lines)
+   PASS  every used altar was taken down  (3 matching lines)
+   PASS  the altar of a weapon the world is full of was taken down  (1 matching lines)
+   PASS  the copies were counted up to the cap  (2 matching lines)
+   PASS  altars generate in newly generated chunks  (20 matching lines)
+   PASS  all eighteen world effects loaded from effects.json  (1 matching lines)
+   PASS  effects.json was readable  (0 matching lines)
+   PASS  no exception out of the effects player or its display mixins  (0 matching lines)
+   PASS  no leftover effect entities had to be swept on a fresh world  (0 matching lines)
+   PASS  every ultimate fired at least once  (10 matching lines)
+   PASS  no exception out of the knockback mixin or the stuns  (0 matching lines)
+
+--- bleed budget: the sum of one bleed's ticks must not exceed 12.0 ---
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=10.5
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=9.0
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=7.5
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=6.0
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=4.5
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=3.0
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=10.5
+ABILITY bleed tick victim=Dummy stacks=2 amount=3.0 budget_left=9.0
+ABILITY bleed tick victim=Dummy stacks=2 amount=3.0 budget_left=6.0
+ABILITY bleed tick victim=Tank stacks=3 amount=4.5 budget_left=7.5
+ABILITY bleed tick victim=Tank stacks=3 amount=4.5 budget_left=3.0
+ABILITY bleed tick victim=Tank stacks=3 amount=3.0 budget_left=0.0
+
+=========== ABILITY LOG (server side) ===========
+ABILITY bleed apply victim=Dummy stacks=1 owner=Smith
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=10.5
+ABILITY bleed apply victim=Dummy stacks=2 owner=Smith
+ABILITY bleed tick victim=Dummy stacks=2 amount=3.0 budget_left=9.0
+ABILITY bleed apply victim=Dummy stacks=3 owner=Smith
+ABILITY bleed tick victim=Dummy stacks=3 amount=4.5 budget_left=7.5
+ABILITY bleed tick victim=Dummy stacks=3 amount=4.5 budget_left=3.0
+ABILITY bleed tick victim=Dummy stacks=3 amount=3.0 budget_left=0.0
+ABILITY bleed apply victim=Dummy stacks=1 owner=Smith
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=10.5
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=9.0
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=7.5
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=6.0
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=4.5
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=3.0
+ABILITY bleed apply victim="Bleeder" stacks=1 owner=Smith
+ABILITY bleed apply victim=Dummy stacks=1 owner=Smith
+ABILITY bleed tick victim="Bleeder" stacks=1 amount=1.5 budget_left=10.5
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=10.5
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=9.0
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=7.5
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=6.0
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=4.5
+ABILITY bleed tick victim=Dummy stacks=1 amount=1.5 budget_left=3.0
+ABILITY dash player=Smith velocity=1.53
+ABILITY momentum player=Smith victim=Dummy bonus=4.0
+ABILITY slam player=Smith targets=1 radius=5.0
+ABILITY shock arm speed=2.97
+ABILITY stun victim=Dummy ticks=40
+ABILITY shock hit victim=Dummy chained=none total=6.0 executed=false
+ABILITY frost player=Smith victim=Dummy frozen=70/140
+ABILITY frost player=Smith victim=Dummy frozen=116/140
+ABILITY shatter player=Smith victim=Dummy bonus=8.0
+ABILITY frostbeam player=Smith victim=Dummy damage=6.0
+ABILITY frostbeam player=Smith victim=miss
+ABILITY frostbeam player=Smith victim=Dummy damage=6.0
+ABILITY shatter player=Smith victim=Dummy bonus=8.0
+ABILITY frostbeam player=Smith victim=Husk damage=6.0
+ABILITY frostbeam player=Smith victim=miss
+ABILITY shock arm speed=3.03
+
+=========== EXCEPTIONS ===========
+(end)
+== exit 1 (on 192.168.2.145) ==

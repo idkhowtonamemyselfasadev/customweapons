@@ -142,6 +142,10 @@ counterpart on raw damage, and the ability is on top. All of it is in the config
 - **Soul Harvest** (passive): a kill heals you 4.0 and shields you with 4 absorption for 10 s.
 - 10.0 at 1.3 on a netherite hoe, which vanilla treats as a tool: it breaks blocks at hoe
   speed and is still a legendary weapon in the hand.
+- **Takes sword enchantments** — Sharpness V, Smite, Looting, Fire Aspect and so on, from
+  the enchanting table or an anvil. (The mod adds the netherite hoe to vanilla's
+  `enchantable/sharp_weapon` and `enchantable/melee_weapon` item tags, so this is true of
+  every netherite hoe on the server.)
 
 ### Starfall — the meteor
 
@@ -375,7 +379,7 @@ and only in newly generated chunks. Set `altars_per_weapon` to 0 for no limit, a
 ## Install
 
 1. Stop the server.
-2. Put `customweapons-1.6.1.jar` in `mods/`, alongside **Fabric API** (`0.141.6+1.21.11` or
+2. Put `customweapons-1.6.2.jar` in `mods/`, alongside **Fabric API** (`0.141.6+1.21.11` or
    newer). `mods/` — not `world/datapacks/`; this is a mod, not a datapack.
 3. Start the server. The console prints:
 
@@ -494,7 +498,7 @@ in the mod needs to know about it.
 
 ```bash
 JAVA_HOME=/home/tim/.gradle/jdks/eclipse_adoptium-21-amd64-linux.2 ./gradlew build
-# -> build/libs/customweapons-1.6.1.jar
+# -> build/libs/customweapons-1.6.2.jar
 ```
 
 ## Testing
