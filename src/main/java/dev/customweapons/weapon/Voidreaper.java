@@ -81,7 +81,8 @@ public final class Voidreaper extends CustomWeapon {
                         config.rift_cooldown_ticks / 20.0)),
                 Weapons.loreLine(String.format("Wither: every hit withers for %.0fs", config.reap_wither_ticks / 20.0)),
                 Weapons.loreLine(String.format("Soul Harvest: a kill heals you %.1f and shields you for %.0fs",
-                        config.harvest_heal, config.harvest_absorption_ticks / 20.0)));
+                        config.harvest_heal, config.harvest_absorption_ticks / 20.0)),
+                Weapons.loreLine("Takes sword enchantments: Sharpness V and the rest"));
     }
 
     @Override

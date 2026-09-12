@@ -1515,6 +1515,19 @@ async function main() {
   const voidreaper = await equipByName(smith, 'netherite_hoe');
   console.log('   ' + describe(voidreaper));
   check(/Voidreaper/.test(JSON.stringify(voidreaper)), 'the Voidreaper reaches the client named');
+  // It takes sword enchantments: /enchant goes through Sharpness' supported_items tag, which
+  // the mod extends to the netherite hoe. On a plain hoe this command is refused.
+  cmd('enchant Smith minecraft:sharpness 5');
+  await sleep(1200);
+  {
+    // mineflayer mis-reads the 1.21.11 component ids, so ask the server for the component.
+    const offset = fs.readFileSync(RUN + '/test.log', 'utf8').length;
+    cmd('data get entity Smith SelectedItem.components."minecraft:enchantments"');
+    await sleep(600);
+    const tail = fs.readFileSync(RUN + '/test.log', 'utf8').slice(offset);
+    check(/"minecraft:sharpness": 5/.test(tail), 'the Voidreaper takes Sharpness V (server-side component)',
+        tail.trim().split('\n').slice(-1)[0] || '(no echo)');
+  }
   let riftTarget = smith.players['Dummy'] && smith.players['Dummy'].entity;
   if (!riftTarget) {
     fail('Smith can see Dummy for the Rift');
@@ -2154,7 +2167,13 @@ async function main() {
   smith.setControlState('sneak', false);
 
   console.log('\n== 11. world effects left nothing behind ==');
-  const taggedLeft = await fxCount();
+  // The last ultimate's effect (Meteor Shower) runs for a few seconds; count after it is over,
+  // and poll, because a slow server can still be tidying up.
+  let taggedLeft = -1;
+  for (let i = 0; i < 12 && taggedLeft !== 0; i++) {
+    await sleep(1000);
+    taggedLeft = await fxCount();
+  }
   const anyLeft = await fxCount('', 'type=minecraft:block_display');
   const sent = [smith, dummy, archer].map((b) => `${b.username} ${b.fxSpawns.length} spawned/${b.fxGone.length} removed`);
   console.log(`   block displays sent to each client over the run: ${sent.join(', ')}`);
