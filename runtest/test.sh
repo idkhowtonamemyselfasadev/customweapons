@@ -92,10 +92,10 @@ JSON
 mkfifo console.fifo
 # Always test the jar that was just built: a stale copy in mods/ once ran a whole suite
 # against last week's abilities and reported them missing.
-if [ -f "$RUN/../build/libs/customweapons-1.6.0.jar" ]; then
-    cp "$RUN/../build/libs/customweapons-1.6.0.jar" mods/customweapons-1.6.0.jar
+if [ -f "$RUN/../build/libs/customweapons-1.6.1.jar" ]; then
+    cp "$RUN/../build/libs/customweapons-1.6.1.jar" mods/customweapons-1.6.1.jar
 fi
-echo "== mod jar: $(ls -la mods/customweapons-1.6.0.jar | awk '{print $5, $6, $7, $8}') =="
+echo "== mod jar: $(ls -la mods/customweapons-1.6.1.jar | awk '{print $5, $6, $7, $8}') =="
 java -Xmx1500M -jar fabric-server-launch.jar nogui < console.fifo > test.log 2>&1 &
 SERVER_PID=$!
 # Hold the FIFO open, or the server sees EOF on stdin and shuts itself down.

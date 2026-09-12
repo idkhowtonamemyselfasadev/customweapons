@@ -1,0 +1,370 @@
+# The ultimates: sneak + left-click on every weapon, photographed mid-animation.
+# Player at 0 -60 0 facing south; three husks around as targets so the area effects show.
+wait 60
+cmd gamemode survival
+cmd gamerule do_daylight_cycle false
+cmd gamerule do_weather_cycle false
+cmd gamerule spawn_mobs false
+cmd gamerule mob_griefing false
+cmd time set 6000
+cmd weather clear
+cmd kill @e[type=!player]
+cmd tp @s 0.5 -60 0.5 0 10
+cmd clear @s
+cmd effect give @s minecraft:resistance 9999 4 true
+cmd effect give @s minecraft:saturation 9999 4 true
+wait 20
+look 0 10
+wait 10
+
+# ---- Crimson Nova
+cmd kill @e[type=!player]
+cmd tp @s 0.5 -60 0.5 0 10
+cmd summon husk 0.5 -60 3.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk -2.5 -60 2.0 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk 3.5 -60 1.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd clear @s
+cmd customweapon give @s bloodletter
+wait 20
+hotbar 0
+look 0 10
+camera first
+wait 10
+shot 01_bloodletter_a_idle
+camera back
+wait 5
+sneak on
+wait 3
+attack
+wait 2
+shot 01_bloodletter_b_ult_t2
+wait 3
+shot 01_bloodletter_c_ult_t5
+wait 3
+shot 01_bloodletter_d_ult_t8
+wait 4
+shot 01_bloodletter_e_t12_landing
+wait 6
+shot 01_bloodletter_e_after
+camera first
+wait 2
+shot 01_bloodletter_f_after_firstperson
+sneak off
+wait 30
+
+# ---- Tempest
+cmd kill @e[type=!player]
+cmd tp @s 0.5 -60 0.5 0 10
+cmd summon husk 0.5 -60 3.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk -2.5 -60 2.0 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk 3.5 -60 1.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd clear @s
+cmd customweapon give @s gale_edge
+wait 20
+hotbar 0
+look 0 10
+camera first
+wait 10
+shot 02_gale_edge_a_idle
+camera back
+wait 5
+sneak on
+wait 3
+attack
+wait 2
+shot 02_gale_edge_b_ult_t2
+wait 3
+shot 02_gale_edge_c_ult_t5
+wait 3
+shot 02_gale_edge_d_ult_t8
+wait 4
+shot 02_gale_edge_e_t12_landing
+wait 6
+shot 02_gale_edge_e_after
+camera first
+wait 2
+shot 02_gale_edge_f_after_firstperson
+sneak off
+wait 30
+
+# ---- Thunderstorm
+cmd kill @e[type=!player]
+cmd tp @s 0.5 -60 0.5 0 10
+cmd summon husk 0.5 -60 3.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk -2.5 -60 2.0 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk 3.5 -60 1.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd clear @s
+cmd customweapon give @s stormpiercer
+wait 20
+hotbar 0
+look 0 10
+camera first
+wait 10
+shot 03_stormpiercer_a_idle
+camera back
+wait 5
+sneak on
+wait 3
+attack
+wait 2
+shot 03_stormpiercer_b_ult_t2
+wait 3
+shot 03_stormpiercer_c_ult_t5
+wait 3
+shot 03_stormpiercer_d_ult_t8
+wait 4
+shot 03_stormpiercer_e_t12_landing
+wait 6
+shot 03_stormpiercer_e_after
+camera first
+wait 2
+shot 03_stormpiercer_f_after_firstperson
+sneak off
+wait 30
+
+# ---- Earthquake
+cmd kill @e[type=!player]
+cmd tp @s 0.5 -60 0.5 0 10
+cmd summon husk 0.5 -60 3.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk -2.5 -60 2.0 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk 3.5 -60 1.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd clear @s
+cmd customweapon give @s aegis_hammer
+wait 20
+hotbar 0
+look 0 10
+camera first
+wait 10
+shot 04_aegis_hammer_a_idle
+camera back
+wait 5
+sneak on
+wait 3
+attack
+wait 2
+shot 04_aegis_hammer_b_ult_t2
+wait 3
+shot 04_aegis_hammer_c_ult_t5
+wait 3
+shot 04_aegis_hammer_d_ult_t8
+wait 4
+shot 04_aegis_hammer_e_t12_landing
+wait 6
+shot 04_aegis_hammer_e_after
+camera first
+wait 2
+shot 04_aegis_hammer_f_after_firstperson
+sneak off
+wait 30
+
+# ---- Absolute Zero
+cmd kill @e[type=!player]
+cmd tp @s 0.5 -60 0.5 0 10
+cmd summon husk 0.5 -60 3.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk -2.5 -60 2.0 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk 3.5 -60 1.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd clear @s
+cmd customweapon give @s frostbrand
+wait 20
+hotbar 0
+look 0 10
+camera first
+wait 10
+shot 05_frostbrand_a_idle
+camera back
+wait 5
+sneak on
+wait 3
+attack
+wait 2
+shot 05_frostbrand_b_ult_t2
+wait 3
+shot 05_frostbrand_c_ult_t5
+wait 3
+shot 05_frostbrand_d_ult_t8
+wait 4
+shot 05_frostbrand_e_t12_landing
+wait 6
+shot 05_frostbrand_e_after
+camera first
+wait 2
+shot 05_frostbrand_f_after_firstperson
+sneak off
+wait 30
+
+# ---- Maelstrom
+cmd kill @e[type=!player]
+cmd tp @s 0.5 -60 0.5 0 10
+cmd summon husk 0.5 -60 3.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk -2.5 -60 2.0 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk 3.5 -60 1.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd clear @s
+cmd customweapon give @s tidecaller
+wait 20
+hotbar 0
+look 0 10
+camera first
+wait 10
+shot 06_tidecaller_a_idle
+camera back
+wait 5
+sneak on
+wait 3
+attack
+wait 2
+shot 06_tidecaller_b_ult_t2
+wait 3
+shot 06_tidecaller_c_ult_t5
+wait 3
+shot 06_tidecaller_d_ult_t8
+wait 4
+shot 06_tidecaller_e_t12_landing
+wait 6
+shot 06_tidecaller_e_after
+camera first
+wait 2
+shot 06_tidecaller_f_after_firstperson
+sneak off
+wait 30
+
+# ---- Inferno
+cmd kill @e[type=!player]
+cmd tp @s 0.5 -60 0.5 0 10
+cmd summon husk 0.5 -60 3.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk -2.5 -60 2.0 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk 3.5 -60 1.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd clear @s
+cmd customweapon give @s hellfire
+wait 20
+hotbar 0
+look 0 10
+camera first
+wait 10
+shot 07_hellfire_a_idle
+camera back
+wait 5
+sneak on
+wait 3
+attack
+wait 2
+shot 07_hellfire_b_ult_t2
+wait 3
+shot 07_hellfire_c_ult_t5
+wait 3
+shot 07_hellfire_d_ult_t8
+wait 4
+shot 07_hellfire_e_t12_landing
+wait 6
+shot 07_hellfire_e_after
+camera first
+wait 2
+shot 07_hellfire_f_after_firstperson
+sneak off
+wait 30
+
+# ---- Judgement
+cmd kill @e[type=!player]
+cmd tp @s 0.5 -60 0.5 0 10
+cmd summon husk 0.5 -60 3.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk -2.5 -60 2.0 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk 3.5 -60 1.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd clear @s
+cmd customweapon give @s dawnbreaker
+wait 20
+hotbar 0
+look 0 10
+camera first
+wait 10
+shot 08_dawnbreaker_a_idle
+camera back
+wait 5
+sneak on
+wait 3
+attack
+wait 2
+shot 08_dawnbreaker_b_ult_t2
+wait 3
+shot 08_dawnbreaker_c_ult_t5
+wait 3
+shot 08_dawnbreaker_d_ult_t8
+wait 4
+shot 08_dawnbreaker_e_t12_landing
+wait 6
+shot 08_dawnbreaker_e_after
+camera first
+wait 2
+shot 08_dawnbreaker_f_after_firstperson
+sneak off
+wait 30
+
+# ---- Void Collapse
+cmd kill @e[type=!player]
+cmd tp @s 0.5 -60 0.5 0 10
+cmd summon husk 0.5 -60 3.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk -2.5 -60 2.0 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk 3.5 -60 1.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd clear @s
+cmd customweapon give @s voidreaper
+wait 20
+hotbar 0
+look 0 10
+camera first
+wait 10
+shot 09_voidreaper_a_idle
+camera back
+wait 5
+sneak on
+wait 3
+attack
+wait 2
+shot 09_voidreaper_b_ult_t2
+wait 3
+shot 09_voidreaper_c_ult_t5
+wait 3
+shot 09_voidreaper_d_ult_t8
+wait 4
+shot 09_voidreaper_e_t12_landing
+wait 6
+shot 09_voidreaper_e_after
+camera first
+wait 2
+shot 09_voidreaper_f_after_firstperson
+sneak off
+wait 30
+
+# ---- Meteor Shower
+cmd kill @e[type=!player]
+cmd tp @s 0.5 -60 0.5 0 10
+cmd summon husk 0.5 -60 3.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk -2.5 -60 2.0 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd summon husk 3.5 -60 1.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:200}],Health:200f}
+cmd clear @s
+cmd customweapon give @s starfall
+wait 20
+hotbar 0
+look 0 10
+camera first
+wait 10
+shot 10_starfall_a_idle
+camera back
+wait 5
+sneak on
+wait 3
+attack
+wait 2
+shot 10_starfall_b_ult_t2
+wait 3
+shot 10_starfall_c_ult_t5
+wait 3
+shot 10_starfall_d_ult_t8
+wait 4
+shot 10_starfall_e_t12_landing
+wait 6
+shot 10_starfall_e_after
+camera first
+wait 2
+shot 10_starfall_f_after_firstperson
+sneak off
+wait 30
+
+quit

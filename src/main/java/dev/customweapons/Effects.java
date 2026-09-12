@@ -267,12 +267,23 @@ public final class Effects {
 
     public void onTick(MinecraftServer server) {
         if (!later.isEmpty()) {
+            // Collect first, run after: an action that schedules another one (a leap whose
+            // landing schedules the blast) would otherwise add to the list mid-iteration and
+            // crash the server tick with a ConcurrentModificationException.
+            List<Runnable> due = new ArrayList<>();
             Iterator<Later> lt = later.iterator();
             while (lt.hasNext()) {
                 Later entry = lt.next();
                 if (--entry.ticks()[0] <= 0) {
                     lt.remove();
-                    entry.action().run();
+                    due.add(entry.action());
+                }
+            }
+            for (Runnable action : due) {
+                try {
+                    action.run();
+                } catch (RuntimeException e) {
+                    CustomWeapons.LOGGER.error("Delayed effect action failed", e);
                 }
             }
         }

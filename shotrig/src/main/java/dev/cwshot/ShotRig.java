@@ -120,6 +120,8 @@ public final class ShotRig implements ClientModInitializer {
                 }
                 case "hotbar" -> mc.player.getInventory().setSelectedSlot(Integer.parseInt(arg));
                 case "attack" -> KeyMapping.click(InputConstants.Type.MOUSE.getOrCreate(GLFW.GLFW_MOUSE_BUTTON_LEFT));
+                // sneak on|off: the ultimates fire on a left-click while sneaking.
+                case "sneak" -> mc.options.keyShift.setDown("on".equals(arg));
                 case "use" -> KeyMapping.click(InputConstants.Type.MOUSE.getOrCreate(GLFW.GLFW_MOUSE_BUTTON_RIGHT));
                 case "hold" -> {
                     KeyMapping.click(InputConstants.Type.MOUSE.getOrCreate(GLFW.GLFW_MOUSE_BUTTON_RIGHT));

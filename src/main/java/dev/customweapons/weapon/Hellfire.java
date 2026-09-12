@@ -187,6 +187,7 @@ public final class Hellfire extends CustomWeapon {
             return;
         }
         ServerLevel level = (ServerLevel) player.level();
+        Ultimate.spin(player, 14);
         int hit = 0;
         for (LivingEntity victim : Ultimate.targets(player, config.inferno_radius)) {
             if (Ultimate.strike(player, victim, config.inferno_damage)) {

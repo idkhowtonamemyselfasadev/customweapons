@@ -238,6 +238,7 @@ public final class Dawnbreaker extends CustomWeapon {
             return;
         }
         ServerLevel level = (ServerLevel) player.level();
+        Ultimate.plant(player, 15);
         int hit = 0;
         for (LivingEntity victim : Ultimate.targets(player, config.judgement_radius)) {
             double amount = config.judgement_damage * (victim.getType().is(net.minecraft.tags.EntityTypeTags.UNDEAD) ? 1.5 : 1.0);

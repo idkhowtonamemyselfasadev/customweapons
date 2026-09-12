@@ -167,54 +167,58 @@ public final class AegisHammer extends CustomWeapon {
             return InteractionResult.PASS;
         }
 
-        AABB box = player.getBoundingBox().inflate(config.slam_radius);
-        List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, box, entity ->
-                entity != player
-                        && entity.isAlive()
-                        && !(entity instanceof Player other && (other.isCreative() || other.isSpectator()))
-                        && entity.distanceTo(player) <= config.slam_radius
-                        // A slam through a wall would hit people who never saw it coming.
-                        && player.hasLineOfSight(entity));
-
-        for (LivingEntity target : targets) {
-            Hurt.deal(target, target.damageSources().playerAttack(player), (float) config.slam_damage);
-            target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS,
-                    config.slam_slowness_ticks, config.slam_slowness_amplifier));
-
-            Vec3 away = target.position().subtract(player.position());
-            if (away.lengthSqr() < 1.0e-4) {
-                away = new Vec3(0, 0, 1);
-            }
-            away = away.normalize().scale(config.slam_knock_out);
-            target.setDeltaMovement(target.getDeltaMovement()
-                    .add(away.x, config.slam_knock_up, away.z));
-            target.hurtMarked = true;
-            if (target instanceof ServerPlayer hit) {
-                hit.connection.send(new ClientboundSetEntityMotionPacket(hit));
-            }
-        }
-
-        player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, config.slam_resistance_ticks, 0));
+        // The body goes with it: a short hop, and the hammer meets the ground when the
+        // player does - everything below runs on the landing, not on the click.
         CustomWeapons.cooldowns().set(player, SLAM, config.slam_cooldown_ticks, weapon);
         CustomWeapons.animations().play(player, this, config);
+        Ultimate.leapSlam(player, 0.45, () -> {
+            AABB box = player.getBoundingBox().inflate(config.slam_radius);
+            List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, box, entity ->
+                    entity != player
+                            && entity.isAlive()
+                            && !(entity instanceof Player other && (other.isCreative() || other.isSpectator()))
+                            && entity.distanceTo(player) <= config.slam_radius
+                            // A slam through a wall would hit people who never saw it coming.
+                            && player.hasLineOfSight(entity));
 
-        // The flash sits where the head lands: a block in front of the player.
-        Vec3 ahead = player.getLookAngle().multiply(1, 0, 1).normalize();
-        CustomWeapons.effects().play(level, "slam_wave",
-                player.position().add(ahead.x * 0.2, 0, ahead.z * 0.2), null);
-        level.playSound(null, player.getX(), player.getY(), player.getZ(),
-                SoundEvents.MACE_SMASH_GROUND, SoundSource.PLAYERS, 1.0f, 0.8f);
-        level.playSound(null, player.getX(), player.getY(), player.getZ(),
-                SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 0.3f, 0.8f);
-        ring(level, player, config.slam_radius);
+            for (LivingEntity target : targets) {
+                Hurt.deal(target, target.damageSources().playerAttack(player), (float) config.slam_damage);
+                target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS,
+                        config.slam_slowness_ticks, config.slam_slowness_amplifier));
 
-        if (config.log_abilities) {
-            CustomWeapons.LOGGER.info("ABILITY slam player={} targets={} radius={}",
-                    player.getName().getString(), targets.size(),
-                    String.format("%.1f", config.slam_radius));
-        }
-        player.displayClientMessage(Component.literal("Ground Slam  " + targets.size() + " hit")
-                .withStyle(ChatFormatting.GOLD), true);
+                Vec3 away = target.position().subtract(player.position());
+                if (away.lengthSqr() < 1.0e-4) {
+                    away = new Vec3(0, 0, 1);
+                }
+                away = away.normalize().scale(config.slam_knock_out);
+                target.setDeltaMovement(target.getDeltaMovement()
+                        .add(away.x, config.slam_knock_up, away.z));
+                target.hurtMarked = true;
+                if (target instanceof ServerPlayer hit) {
+                    hit.connection.send(new ClientboundSetEntityMotionPacket(hit));
+                }
+            }
+
+            player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, config.slam_resistance_ticks, 0));
+
+            // The flash sits where the head lands: a block in front of the player.
+            Vec3 ahead = player.getLookAngle().multiply(1, 0, 1).normalize();
+            CustomWeapons.effects().play(level, "slam_wave",
+                    player.position().add(ahead.x * 0.2, 0, ahead.z * 0.2), null);
+            level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                    SoundEvents.MACE_SMASH_GROUND, SoundSource.PLAYERS, 1.0f, 0.8f);
+            level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                    SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 0.3f, 0.8f);
+            ring(level, player, config.slam_radius);
+
+            if (config.log_abilities) {
+                CustomWeapons.LOGGER.info("ABILITY slam player={} targets={} radius={}",
+                        player.getName().getString(), targets.size(),
+                        String.format("%.1f", config.slam_radius));
+            }
+            player.displayClientMessage(Component.literal("Ground Slam  " + targets.size() + " hit")
+                    .withStyle(ChatFormatting.GOLD), true);
+        });
         return InteractionResult.SUCCESS;
     }
 
@@ -245,18 +249,27 @@ public final class AegisHammer extends CustomWeapon {
             return;
         }
         ServerLevel level = (ServerLevel) player.level();
-        int hit = 0;
-        for (LivingEntity victim : Ultimate.targets(player, config.earthquake_radius)) {
-            if (Ultimate.strike(player, victim, config.earthquake_damage)) {
-                hit++;
+        // Cooldown and animation start now; the hammer comes down half a second later and
+        // that is when the ground breaks.
+        Ultimate.fired(player, this, EARTHQUAKE, config.earthquake_cooldown_ticks, "Earthquake", -1, SoundEvents.ANVIL_LAND, 0.6f, config);
+        Ultimate.leapSlam(player, 0.75, () -> {
+            int hit = 0;
+            for (LivingEntity victim : Ultimate.targets(player, config.earthquake_radius)) {
+                if (Ultimate.strike(player, victim, config.earthquake_damage)) {
+                    hit++;
+                }
+                Ultimate.fling(player, victim, 0.6, 0.9);
+                victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 100, 2));
             }
-            Ultimate.fling(player, victim, 0.6, 0.9);
-            victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 100, 2));
-        }
-        player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 160, 1));
-        CustomWeapons.effects().play(level, "slam_wave", player.position(), null);
-        level.sendParticles(ParticleTypes.EXPLOSION, player.getX(), player.getY(), player.getZ(), 12, 3, 0.2, 3, 0);
-        Ultimate.fired(player, this, EARTHQUAKE, config.earthquake_cooldown_ticks, "Earthquake", hit, SoundEvents.GENERIC_EXPLODE.value(), 0.5f, config);
+            player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 160, 1));
+            CustomWeapons.effects().play(level, "slam_wave", player.position(), null);
+            level.sendParticles(ParticleTypes.EXPLOSION, player.getX(), player.getY(), player.getZ(), 12, 3, 0.2, 3, 0);
+            level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.GENERIC_EXPLODE.value(), net.minecraft.sounds.SoundSource.PLAYERS, 1.2f, 0.5f);
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal("Earthquake  " + hit + " hit").withStyle(ChatFormatting.LIGHT_PURPLE), true);
+            if (config.log_abilities) {
+                CustomWeapons.LOGGER.info("ULTIMATE earthquake player={} victims={}", player.getName().getString(), hit);
+            }
+        });
     }
 
     @Override

@@ -288,7 +288,7 @@ def write_pack():
 
     with open(os.path.join(PACK, "pack.mcmeta"), "w") as f:
         json.dump({"pack": {"pack_format": 75, "min_format": [75, 0], "max_format": [75, 99],
-                            "description": "CustomWeapons: 3D models for the ten legendaries"}}, f, indent=2)
+                            "description": "CustomWeapons + Beyond the End: 3D items and the End music"}}, f, indent=2)
 
     models = {}
     counts = {}
@@ -309,9 +309,10 @@ def write_pack():
     for weapon, img in textures.items():
         img.save(os.path.join(tex_dir, weapon + ".png"))
     definitions = item_definitions()
-    # Beyond the End's item models ride along (a snapshot of its built pack in pack/vendor):
-    # both mods override the same five vanilla item files, a client keeps one file per
-    # path, so each pack carries the other's cases and the two servers packs agree.
+    # Beyond the End rides along whole - its item models AND its music (a snapshot of its
+    # built pack in pack/vendor) - so the server sends one pack for both mods. Both mods
+    # override the same five vanilla item files and a client keeps one file per path, so
+    # this pack carries both sets of cases.
     vendored = 0
     if os.path.isdir(VENDOR):
         for folder, _, files in os.walk(os.path.join(VENDOR, "assets", "beyond")):
@@ -331,7 +332,7 @@ def write_pack():
                 definitions[base]["model"]["cases"] += their_cases
             else:
                 definitions[base] = theirs
-        print(f"folded in {vendored} Beyond the End files")
+        print(f"folded in {vendored} Beyond the End files (models, textures, music)")
     for base, definition in definitions.items():
         with open(os.path.join(items_dir, base + ".json"), "w") as f:
             json.dump(definition, f, indent=2)

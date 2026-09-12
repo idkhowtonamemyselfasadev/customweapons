@@ -195,6 +195,7 @@ public final class GaleEdge extends CustomWeapon {
             return;
         }
         ServerLevel level = (ServerLevel) player.level();
+        Ultimate.spin(player, 16);
         int hit = 0;
         for (LivingEntity victim : Ultimate.targets(player, config.tempest_radius)) {
             if (Ultimate.strike(player, victim, config.tempest_damage)) {

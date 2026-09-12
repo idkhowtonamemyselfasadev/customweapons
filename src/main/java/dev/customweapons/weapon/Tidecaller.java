@@ -204,6 +204,7 @@ public final class Tidecaller extends CustomWeapon {
             return;
         }
         ServerLevel level = (ServerLevel) player.level();
+        Ultimate.spin(player, 20);
         int hit = 0;
         for (LivingEntity victim : Ultimate.targets(player, config.maelstrom_radius)) {
             if (Ultimate.strike(player, victim, config.maelstrom_damage)) {

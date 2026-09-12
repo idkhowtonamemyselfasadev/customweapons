@@ -1,0 +1,66 @@
+== mod jar: 203539 Sep 12 18:55 ==
+== booting 1.21.11 Fabric server on port 25603 ==
+[18:55:21] [Server thread/INFO]: CustomWeapons ready: 10 weapons craftable, 0 altars known
+
+== recipes loaded without error ==
+   PASS  no recipe parse errors in the server log
+== connecting three vanilla clients ==
+
+=========== SERVER-SIDE ASSERTIONS ===========
+!! FAIL  bleed applied and reached three stacks  (0 lines, wanted -ge 1)
+!! FAIL  bleed ticked repeatedly  (0 lines, wanted -ge 4)
+!! FAIL  a bleed tick killed its victim without a crash  (0 lines, wanted -ge 1)
+!! FAIL  the dash fired  (0 lines, wanted -ge 1)
+!! FAIL  the Momentum Strike fired  (0 lines, wanted -ge 1)
+!! FAIL  the slam fired and found a target  (0 lines, wanted -ge 1)
+!! FAIL  exactly one arrow armed per ready full draw (? fired), none for the partial or cooldown ones  (0 lines, wanted -eq 1)
+!! FAIL  the shock landed  (0 lines, wanted -ge 1)
+!! FAIL  the shock on Dummy was the +6.0 bonus alone, nothing chained  (0 lines, wanted -ge 1)
+!! FAIL  the shock stunned the target  (0 lines, wanted -ge 1)
+!! FAIL  the shock executed a creeper  (0 lines, wanted -ge 1)
+!! FAIL  frost stacked on a target  (0 lines, wanted -ge 2)
+!! FAIL  the shatter fired  (0 lines, wanted -ge 1)
+!! FAIL  the ice beam froze the target (twice: the walk probe and the rigid-freeze probe)  (0 lines, wanted -ge 2)
+!! FAIL  the ice beam froze the husk  (0 lines, wanted -ge 1)
+!! FAIL  the ice beam can miss  (0 lines, wanted -ge 1)
+!! FAIL  the harpoon fired  (0 lines, wanted -ge 1)
+!! FAIL  a daytime Dawnbreaker hit added the Solar Brand  (0 lines, wanted -ge 1)
+!! FAIL  the Sunstrike landed on Dummy  (0 lines, wanted -ge 1)
+!! FAIL  the Rift fired on Dummy  (0 lines, wanted -ge 1)
+!! FAIL  the backstab landed  (0 lines, wanted -ge 1)
+!! FAIL  the Soul Harvest fed the wielder  (0 lines, wanted -ge 1)
+!! FAIL  the Comet launched  (0 lines, wanted -ge 1)
+!! FAIL  the landing was the impact and hit Dummy  (0 lines, wanted -ge 1)
+!! FAIL  the Exsanguinate burst one bleed  (0 lines, wanted -ge 1)
+!! FAIL  the Stagger stunned Dummy  (0 lines, wanted -ge 1)
+!! FAIL  a Hellfire bolt was armed  (0 lines, wanted -ge 1)
+!! FAIL  the Hellfire bolt exploded  (0 lines, wanted -ge 1)
+!! FAIL  a Hellfire bolt detonated on the ground (the crash path)  (0 lines, wanted -ge 1)
+   PASS  no ConcurrentModificationException anywhere  (0 matching lines)
+!! FAIL  the one-legendary rule dropped the second weapon, keeping the first  (0 lines, wanted -ge 1)
+!! FAIL  the altar forged a weapon  (0 lines, wanted -ge 3)
+!! FAIL  every used altar was taken down  (0 lines, wanted -ge 3)
+!! FAIL  the altar of a weapon the world is full of was taken down  (0 lines, wanted -ge 1)
+!! FAIL  the copies were counted up to the cap  (0 lines, wanted -ge 1)
+!! FAIL  altars generate in newly generated chunks  (0 lines, wanted -ge 1)
+   PASS  all eighteen world effects loaded from effects.json  (1 matching lines)
+   PASS  effects.json was readable  (0 matching lines)
+   PASS  no exception out of the effects player or its display mixins  (0 matching lines)
+   PASS  no leftover effect entities had to be swept on a fresh world  (0 matching lines)
+!! FAIL  every ultimate fired at least once  (0 lines, wanted -ge 10)
+   PASS  no exception out of the knockback mixin or the stuns  (0 matching lines)
+
+--- bleed budget: the sum of one bleed's ticks must not exceed 12.0 ---
+
+=========== ABILITY LOG (server side) ===========
+
+=========== EXCEPTIONS ===========
+(end)
+um of one bleed's ticks must not exceed 12.0 ---
+
+=========== ABILITY LOG (server side) ===========
+
+=========== EXCEPTIONS ===========
+(end)
+DONE
+DONE

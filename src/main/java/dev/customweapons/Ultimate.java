@@ -61,6 +61,47 @@ public final class Ultimate {
         }
     }
 
+    // ---- body motions: what the player's whole body does, on every client -----------------------
+
+    /**
+     * A full-body spin - vanilla's riptide pose, which every client already renders for
+     * any player it sees. No damage of its own, no push: just the body turning.
+     */
+    public static void spin(ServerPlayer player, int ticks) {
+        player.startAutoSpinAttack(ticks, 0.0f, net.minecraft.world.item.ItemStack.EMPTY);
+        player.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
+    }
+
+    /**
+     * A leap that comes down hard: up now, driven into the ground a few ticks later, and
+     * {@code onLand} - the blast - runs when the body meets the floor, not when the key was
+     * pressed. Fall immunity covers the drop.
+     */
+    public static void leapSlam(ServerPlayer player, double up, Runnable onLand) {
+        CustomWeapons.state().grantFallImmunity(player, 60);
+        launch(player, 0, up, 0);
+        player.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
+        CustomWeapons.effects().later(7, () -> {
+            launch(player, 0, -1.8, 0);
+            CustomWeapons.effects().later(4, () -> {
+                player.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
+                onLand.run();
+            });
+        });
+    }
+
+    /** Rooted in place for a moment, arm raised (a broadcast swing): the caster calling it down. */
+    public static void plant(ServerPlayer player, int ticks) {
+        CustomWeapons.stuns().stun(player, ticks, "casting");
+        player.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
+    }
+
+    private static void launch(ServerPlayer player, double x, double y, double z) {
+        player.setDeltaMovement(x, y, z);
+        player.hurtMarked = true;
+        player.connection.send(new ClientboundSetEntityMotionPacket(player));
+    }
+
     /** Wraps up: cooldown, second animation, sound, message, log. */
     public static void fired(ServerPlayer player, CustomWeapon weapon, String key, int cooldownTicks,
                              String name, int victims, SoundEvent sound, float pitch, WeaponsConfig config) {
@@ -68,6 +109,9 @@ public final class Ultimate {
         CustomWeapons.animations().playUltimate(player, weapon, config);
         if (player.level() instanceof ServerLevel level && sound != null) {
             level.playSound(null, player.getX(), player.getY(), player.getZ(), sound, SoundSource.PLAYERS, 1.2f, pitch);
+        }
+        if (victims < 0) {
+            return;   // the blast lands later; it reports itself
         }
         player.displayClientMessage(Component.literal(name + (victims > 0 ? "  " + victims + " hit" : "  nothing in range"))
                 .withStyle(ChatFormatting.LIGHT_PURPLE), true);
