@@ -261,19 +261,28 @@ public final class Starfall extends CustomWeapon {
             return;
         }
         ServerLevel level = (ServerLevel) player.level();
-        int hit = 0;
-        for (LivingEntity victim : Ultimate.targets(player, config.meteor_shower_radius)) {
-            if (Ultimate.strike(player, victim, config.meteor_shower_damage)) {
-                hit++;
+        Ultimate.fired(player, this, METEOR_SHOWER, config.meteor_shower_cooldown_ticks, "Meteor Shower", -1, SoundEvents.FIRECHARGE_USE, 0.5f, config);
+        level.sendParticles(ParticleTypes.LAVA, player.getX(), player.getY() + 1, player.getZ(), 30, 1, 1, 1, 0.2);
+        // Up like a comet, down like one: the shower lands with the player.
+        Ultimate.leapSlam(player, 1.1, () -> {
+            int hit = 0;
+            for (LivingEntity victim : Ultimate.targets(player, config.meteor_shower_radius)) {
+                if (Ultimate.strike(player, victim, config.meteor_shower_damage)) {
+                    hit++;
+                }
+                Ultimate.fling(player, victim, 0.9, 0.6);
+                victim.igniteForTicks(60);
+                CustomWeapons.effects().play(level, "meteor_impact", victim);
             }
-            Ultimate.fling(player, victim, 0.9, 0.6);
-            victim.igniteForTicks(60);
-            CustomWeapons.effects().play(level, "meteor_impact", victim);
-        }
-        CustomWeapons.state().grantFallImmunity(player, 120);
-        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, player.getX(), player.getY() + 1, player.getZ(), 3, 2, 0.5, 2, 0);
-        level.sendParticles(ParticleTypes.LAVA, player.getX(), player.getY() + 1, player.getZ(), 60, 4, 1, 4, 0.2);
-        Ultimate.fired(player, this, METEOR_SHOWER, config.meteor_shower_cooldown_ticks, "Meteor Shower", hit, SoundEvents.GENERIC_EXPLODE.value(), 0.4f, config);
+            CustomWeapons.state().grantFallImmunity(player, 120);
+            level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, player.getX(), player.getY() + 1, player.getZ(), 3, 2, 0.5, 2, 0);
+            level.sendParticles(ParticleTypes.LAVA, player.getX(), player.getY() + 1, player.getZ(), 60, 4, 1, 4, 0.2);
+            level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.GENERIC_EXPLODE.value(), net.minecraft.sounds.SoundSource.PLAYERS, 1.2f, 0.4f);
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal("Meteor Shower  " + hit + " hit").withStyle(ChatFormatting.LIGHT_PURPLE), true);
+            if (config.log_abilities) {
+                CustomWeapons.LOGGER.info("ULTIMATE meteor_shower player={} victims={}", player.getName().getString(), hit);
+            }
+        });
     }
 
     @Override

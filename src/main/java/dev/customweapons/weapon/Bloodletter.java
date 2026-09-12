@@ -152,6 +152,7 @@ public final class Bloodletter extends CustomWeapon {
             return;
         }
         ServerLevel level = (ServerLevel) player.level();
+        Ultimate.spin(player, 12);
         int hit = 0;
         for (LivingEntity victim : Ultimate.targets(player, config.nova_radius)) {
             // Full bleed stacks at once, then the true damage on top.

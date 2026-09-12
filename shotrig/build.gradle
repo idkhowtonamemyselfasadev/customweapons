@@ -33,7 +33,14 @@ loom {
                 // Pinned here rather than inherited: the Gradle daemon keeps the environment it
                 // was first started with, which once put the rig on the real desktop.
                 environmentVariable "DISPLAY", parts[2]
-                environmentVariable "WAYLAND_DISPLAY", parts[3]
+                // "x11" as the fourth part: no Wayland socket at all, so GLFW goes through
+                // Xwayland. On a box with no GPU the Wayland path segfaults in libwayland.
+                if (parts.length > 3 && parts[3] != "x11") {
+                    environmentVariable "WAYLAND_DISPLAY", parts[3]
+                } else {
+                    environmentVariable "WAYLAND_DISPLAY", ""
+                    environmentVariable "XDG_SESSION_TYPE", "x11"
+                }
                 environmentVariable "SDL_VIDEODRIVER", "x11"
             }
         }

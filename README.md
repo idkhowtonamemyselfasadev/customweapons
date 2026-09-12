@@ -375,7 +375,7 @@ and only in newly generated chunks. Set `altars_per_weapon` to 0 for no limit, a
 ## Install
 
 1. Stop the server.
-2. Put `customweapons-1.6.0.jar` in `mods/`, alongside **Fabric API** (`0.141.6+1.21.11` or
+2. Put `customweapons-1.6.1.jar` in `mods/`, alongside **Fabric API** (`0.141.6+1.21.11` or
    newer). `mods/` — not `world/datapacks/`; this is a mod, not a datapack.
 3. Start the server. The console prints:
 
@@ -434,6 +434,12 @@ python3 pack/build.py     # -> release/CustomWeapons-Models.zip and pack/preview
 
 Open `pack/preview.html` in a browser to see every model turning.
 
+**One pack for the whole server.** The zip also carries everything Beyond the End needs —
+its 46 item models and its End music (a snapshot of that mod's built pack lives in
+`pack/vendor/beyond-pack`, refreshed by copying `beyond/pack/beyond-pack/assets` over it).
+Beyond the End sees CustomWeapons on the server and leaves the sending to it, so players
+get exactly one download. Rebuild here whenever Beyond's models or music change.
+
 **Players get the vanilla download prompt on join** ("This server requires a custom
 resource pack" with Yes / No). No, a disabled server-pack setting, or a failed download
 kicks them with `pack_kick_message`, which tells them what to change. Vanilla only enforces
@@ -449,8 +455,8 @@ time either way. The link and hash live in the config:
 "pack_required": true,
 "pack_kick_message": "This server needs its resource pack. Click Yes on the download prompt, or set Server Resource Packs to Enabled in the server's edit screen.",
 "pack_offer_on_join": true,
-"pack_url": "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.2.1/CustomWeapons-Models.zip",
-"pack_sha1": "2dd32bea93bdc4e37be62da8fb4b34405f60a12c",
+"pack_url": "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.6.1/CustomWeapons-Models.zip",
+"pack_sha1": "37fc9c03e155ae80951beeb57ae7696994b7d1ca",
 "pack_offer_message": "This server has 3D models for the legendary weapons. Want them?"
 ```
 
@@ -488,7 +494,7 @@ in the mod needs to know about it.
 
 ```bash
 JAVA_HOME=/home/tim/.gradle/jdks/eclipse_adoptium-21-amd64-linux.2 ./gradlew build
-# -> build/libs/customweapons-1.6.0.jar
+# -> build/libs/customweapons-1.6.1.jar
 ```
 
 ## Testing

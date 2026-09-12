@@ -1,0 +1,40 @@
+client exit 0
+70 screenshots in /home/tim/claude/customweapons/shotrig/shots
+[18:55:06] [Render thread/INFO] (cwshot) script: wait 4
+[18:55:06] [IO-Worker-2/INFO] (cwshot) screenshot Saved screenshot as 10_starfall_c_ult_t5.png
+[18:55:06] [Render thread/INFO] (cwshot) script: shot 10_starfall_e_t12_landing
+[18:55:07] [IO-Worker-1/INFO] (cwshot) screenshot Saved screenshot as 10_starfall_d_ult_t8.png
+[18:55:07] [Render thread/INFO] (cwshot) script: wait 6
+[18:55:07] [IO-Worker-2/INFO] (cwshot) screenshot Saved screenshot as 10_starfall_e_t12_landing.png
+[18:55:07] [Render thread/INFO] (cwshot) script: shot 10_starfall_e_after
+[18:55:07] [Render thread/INFO] (cwshot) script: camera first
+[18:55:07] [Render thread/INFO] (cwshot) script: wait 2
+[18:55:07] [Render thread/INFO] (cwshot) script: shot 10_starfall_f_after_firstperson
+[18:55:07] [IO-Worker-2/INFO] (cwshot) screenshot Saved screenshot as 10_starfall_e_after.png
+[18:55:07] [Render thread/INFO] (cwshot) script: sneak off
+[18:55:07] [Render thread/INFO] (cwshot) script: wait 30
+[18:55:07] [IO-Worker-1/INFO] (cwshot) screenshot Saved screenshot as 10_starfall_f_after_firstperson.png
+[18:55:09] [Render thread/INFO] (cwshot) script: quit
+[18:53:25] [main/INFO]: Loaded 18 world effects
+[18:54:02] [Server thread/INFO]: ABILITY bleed apply victim=Husk stacks=1 owner=ShotRig
+[18:54:02] [Server thread/INFO]: ABILITY bleed apply victim=Husk stacks=1 owner=ShotRig
+[18:54:02] [Server thread/INFO]: ABILITY bleed apply victim=Husk stacks=2 owner=ShotRig
+[18:54:02] [Server thread/INFO]: ABILITY bleed apply victim=Husk stacks=3 owner=ShotRig
+[18:54:02] [Server thread/INFO]: ABILITY bleed apply victim=Husk stacks=2 owner=ShotRig
+[18:54:02] [Server thread/INFO]: ABILITY bleed apply victim=Husk stacks=3 owner=ShotRig
+[18:54:02] [Server thread/INFO]: ABILITY bleed apply victim=Husk stacks=3 owner=ShotRig
+[18:54:02] [Server thread/INFO]: ABILITY bleed apply victim=Husk stacks=1 owner=ShotRig
+[18:54:02] [Server thread/INFO]: ABILITY bleed apply victim=Husk stacks=2 owner=ShotRig
+[18:54:02] [Server thread/INFO]: ABILITY bleed apply victim=Husk stacks=3 owner=ShotRig
+[18:54:02] [Server thread/INFO]: ABILITY bleed tick victim=Husk stacks=3 amount=4.5 budget_left=7.5
+[18:54:02] [Server thread/INFO]: ABILITY bleed tick victim=Husk stacks=3 amount=4.5 budget_left=7.5
+[18:54:02] [Server thread/INFO]: ABILITY bleed tick victim=Husk stacks=3 amount=4.5 budget_left=7.5
+[18:54:03] [Server thread/INFO]: ABILITY bleed tick victim=Husk stacks=3 amount=4.5 budget_left=3.0
+[18:54:03] [Server thread/INFO]: ABILITY bleed tick victim=Husk stacks=3 amount=4.5 budget_left=3.0
+[18:54:03] [Server thread/INFO]: ABILITY bleed tick victim=Husk stacks=3 amount=4.5 budget_left=3.0
+[18:54:03] [Server thread/INFO]: ABILITY bleed tick victim=Husk stacks=3 amount=3.0 budget_left=0.0
+[18:54:03] [Server thread/INFO]: ABILITY bleed tick victim=Husk stacks=3 amount=3.0 budget_left=0.0
+[18:54:03] [Server thread/INFO]: ABILITY bleed tick victim=Husk stacks=3 amount=3.0 budget_left=0.0
+[18:54:30] [Server thread/INFO]: ABILITY frost player=ShotRig victim=Husk frozen=70/140
+[18:54:51] [Server thread/INFO]: ABILITY solar player=ShotRig victim=Husk bonus=2.0
+DONE

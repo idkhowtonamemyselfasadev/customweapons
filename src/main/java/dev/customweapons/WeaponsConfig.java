@@ -292,9 +292,9 @@ public final class WeaponsConfig {
     /** With pack_required off: ask each player in chat, on join, whether they want the models. */
     public boolean pack_offer_on_join = true;
     /** A direct download link to the pack zip. A GitHub release asset works. */
-    public String pack_url = "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.6.0/CustomWeapons-Models.zip";
+    public String pack_url = "https://github.com/idkhowtonamemyselfasadev/customweapons/releases/download/v1.6.1/CustomWeapons-Models.zip";
     /** SHA-1 of that zip. Change it with the file, or clients keep a stale cached copy. */
-    public String pack_sha1 = "3349b49ae6426769679ef2e24a45ecff110e1ec6";
+    public String pack_sha1 = "37fc9c03e155ae80951beeb57ae7696994b7d1ca";
     public String pack_offer_message = "This server has 3D models for the legendary weapons. Want them?";
 
     // --------------------------------------------------------------- world effects

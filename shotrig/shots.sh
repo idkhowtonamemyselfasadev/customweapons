@@ -8,7 +8,9 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 MOD="$(dirname "$DIR")"
 SRV="$DIR/server"
 GRADLE="$HOME/.gradle/wrapper/dists/gradle-9.6.1-bin/4ticwg1pgcbps2hj28r8so764/gradle-9.6.1/bin/gradle"
+[ -x "$GRADLE" ] || GRADLE="$HOME/opt/gradle-9.6.1/bin/gradle"
 export JAVA_HOME=/home/tim/.gradle/jdks/eclipse_adoptium-21-amd64-linux.2
+[ -d "$JAVA_HOME" ] || export JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")"
 PORT=25604
 
 # Tim's own game may be running: the hidden client only shares the GPU with it for a few
@@ -21,7 +23,7 @@ rsync -a --exclude world --exclude logs --exclude '*.log' --exclude console.fifo
 [ -e "$SRV/libraries" ] || ln -s ../../run/libraries "$SRV/libraries"
 [ -e "$SRV/versions" ] || ln -s ../../run/versions "$SRV/versions"
 rm -rf "$SRV/world"
-cp "$MOD/build/libs/customweapons-1.0.0.jar" "$SRV/mods/"
+cp "$MOD/build/libs/customweapons-1.6.0.jar" "$SRV/mods/"; rm -f "$SRV"/mods/customweapons-1.0.0.jar
 sed -i "s/^server-port=.*/server-port=$PORT/" "$SRV/server.properties"
 grep -q "^level-type=" "$SRV/server.properties" && sed -i 's/^level-type=.*/level-type=minecraft\\:flat/' "$SRV/server.properties"
 mkdir -p "$SRV/config"
@@ -48,7 +50,7 @@ ls "$XDG_RUNTIME_DIR/wl-mc" >/dev/null 2>&1 || { weston --backend=headless --xwa
 cp "$MOD/release/CustomWeapons-Models.zip" "$DIR/run/resourcepacks/"
 rm -rf "$DIR/run/screenshots"; mkdir -p "$DIR/run/screenshots"
 # display and script go in as a project property: the daemon's own environment is not trusted
-timeout 600 "$GRADLE" -p "$DIR" runClient -q "-Pcwrig=$DIR/${SCRIPT:-script.txt}|127.0.0.1:$PORT|:1|wl-mc" > "$DIR/runclient.log" 2>&1
+timeout 600 "$GRADLE" -p "$DIR" runClient -q "-Pcwrig=$DIR/${SCRIPT:-script.txt}|127.0.0.1:$PORT|${RIG_DISPLAY:-:1}|${RIG_WAYLAND:-wl-mc}" > "$DIR/runclient.log" 2>&1
 echo "client exit $?"
 # grant op again in case the client joined before the first op landed, and collect
 mkdir -p "$DIR/shots"; rm -f "$DIR"/shots/*.png

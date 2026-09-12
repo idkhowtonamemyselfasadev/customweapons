@@ -280,6 +280,7 @@ public final class Frostbrand extends CustomWeapon {
             return;
         }
         ServerLevel level = (ServerLevel) player.level();
+        Ultimate.plant(player, 12);
         int hit = 0;
         for (LivingEntity victim : Ultimate.targets(player, config.absolute_zero_radius)) {
             if (Ultimate.strike(player, victim, config.absolute_zero_damage)) {

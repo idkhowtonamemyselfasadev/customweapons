@@ -1,0 +1,74 @@
+{
+  "music.beyond.violet": {
+    "sounds": [
+      {
+        "name": "beyond:music/violet",
+        "stream": true
+      }
+    ]
+  },
+  "music.beyond.verdigris": {
+    "sounds": [
+      {
+        "name": "beyond:music/verdigris",
+        "stream": true
+      }
+    ]
+  },
+  "music.beyond.ember": {
+    "sounds": [
+      {
+        "name": "beyond:music/ember",
+        "stream": true
+      }
+    ]
+  },
+  "music.beyond.bone": {
+    "sounds": [
+      {
+        "name": "beyond:music/bone",
+        "stream": true
+      }
+    ]
+  },
+  "music.beyond.abyssal": {
+    "sounds": [
+      {
+        "name": "beyond:music/abyssal",
+        "stream": true
+      }
+    ]
+  },
+  "music.beyond.gilded": {
+    "sounds": [
+      {
+        "name": "beyond:music/gilded",
+        "stream": true
+      }
+    ]
+  },
+  "music.beyond.roseate": {
+    "sounds": [
+      {
+        "name": "beyond:music/roseate",
+        "stream": true
+      }
+    ]
+  },
+  "music.beyond.glacial": {
+    "sounds": [
+      {
+        "name": "beyond:music/glacial",
+        "stream": true
+      }
+    ]
+  },
+  "music.beyond.hollow_king": {
+    "sounds": [
+      {
+        "name": "beyond:music/hollow_king",
+        "stream": true
+      }
+    ]
+  }
+}
