@@ -17,6 +17,12 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 
+import dev.customweapons.Ultimate;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import java.util.List;
 
 /**
@@ -135,5 +141,37 @@ public final class Bloodletter extends CustomWeapon {
             CustomWeapons.effects().play(level, "blood_slash", victim);
         }
         CustomWeapons.animations().play(attacker, this, config);
+    }
+
+    // ---- ultimate: Crimson Nova ----------------------------------------------------------------
+    public static final String NOVA = "crimson_nova";
+
+    @Override
+    public void onUltimate(ServerPlayer player, ItemStack weapon, WeaponsConfig config) {
+        if (!Ultimate.ready(player, NOVA, "Crimson Nova")) {
+            return;
+        }
+        ServerLevel level = (ServerLevel) player.level();
+        int hit = 0;
+        for (LivingEntity victim : Ultimate.targets(player, config.nova_radius)) {
+            // Full bleed stacks at once, then the true damage on top.
+            for (int i = 0; i < config.bleed_max_stacks; i++) {
+                CustomWeapons.bleed().apply(player, victim, config);
+            }
+            if (Ultimate.strike(player, victim, config.nova_damage)) {
+                hit++;
+                CustomWeapons.effects().play(level, "blood_burst", victim);
+            }
+        }
+        if (hit > 0) {
+            player.heal((float) (config.nova_heal_per_victim * hit));
+        }
+        level.sendParticles(ParticleTypes.CRIMSON_SPORE, player.getX(), player.getY() + 1, player.getZ(), 200, 3, 1, 3, 0.05);
+        Ultimate.fired(player, this, NOVA, config.nova_cooldown_ticks, "Crimson Nova", hit, SoundEvents.WITHER_HURT, 0.6f, config);
+    }
+
+    @Override
+    public String ultimateLore(WeaponsConfig config) {
+        return String.format("Crimson Nova - everything within %.0f blocks bleeds fully and takes %.1f true damage; heals you %.0f per victim. %ds", config.nova_radius, config.nova_damage, config.nova_heal_per_victim, config.nova_cooldown_ticks / 20);
     }
 }

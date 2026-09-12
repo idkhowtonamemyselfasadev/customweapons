@@ -23,6 +23,9 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
+import dev.customweapons.Ultimate;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import java.util.List;
 
 /**
@@ -141,6 +144,11 @@ public final class Hellfire extends CustomWeapon {
         // swallow most of the blast on the one entity it was aimed at.
         victim.invulnerableTime = 0;
         explode(projectile, victim.position().add(0, victim.getBbHeight() * 0.5, 0), victim, config);
+        // A direct hit also lands true damage: a blast alone is mostly eaten by armour, which
+        // is why the crossbow felt like it did nothing.
+        if (shooter != null && config.hellfire_direct_hit_damage > 0) {
+            dev.customweapons.Ultimate.strike(shooter, victim, config.hellfire_direct_hit_damage);
+        }
     }
 
     private void explode(AbstractArrow projectile, Vec3 at, LivingEntity direct, WeaponsConfig config) {
@@ -168,5 +176,33 @@ public final class Hellfire extends CustomWeapon {
                     direct == null ? "ground" : direct.getName().getString(),
                     String.format("%.1f %.1f %.1f", at.x, at.y, at.z));
         }
+    }
+
+    // ---- ultimate: Inferno -----------------------------------------------------------------------
+    public static final String INFERNO = "inferno";
+
+    @Override
+    public void onUltimate(ServerPlayer player, ItemStack weapon, WeaponsConfig config) {
+        if (!Ultimate.ready(player, INFERNO, "Inferno")) {
+            return;
+        }
+        ServerLevel level = (ServerLevel) player.level();
+        int hit = 0;
+        for (LivingEntity victim : Ultimate.targets(player, config.inferno_radius)) {
+            if (Ultimate.strike(player, victim, config.inferno_damage)) {
+                hit++;
+            }
+            victim.igniteForTicks(config.inferno_fire_ticks);
+            Ultimate.fling(player, victim, 0.4, 0.3);
+        }
+        CustomWeapons.effects().play(level, "hell_burst", player.position(), null);
+        level.sendParticles(ParticleTypes.FLAME, player.getX(), player.getY() + 0.5, player.getZ(), 250, 3.5, 0.6, 3.5, 0.05);
+        level.sendParticles(ParticleTypes.LAVA, player.getX(), player.getY() + 0.5, player.getZ(), 30, 2, 0.5, 2, 0.1);
+        Ultimate.fired(player, this, INFERNO, config.inferno_cooldown_ticks, "Inferno", hit, SoundEvents.GHAST_SHOOT, 0.6f, config);
+    }
+
+    @Override
+    public String ultimateLore(WeaponsConfig config) {
+        return String.format("Inferno - a ring of fire: %.1f true damage to everything within %.0f blocks and %.0fs of burning. %ds", config.inferno_damage, config.inferno_radius, config.inferno_fire_ticks / 20.0, config.inferno_cooldown_ticks / 20);
     }
 }

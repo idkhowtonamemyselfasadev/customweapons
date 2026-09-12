@@ -92,10 +92,10 @@ JSON
 mkfifo console.fifo
 # Always test the jar that was just built: a stale copy in mods/ once ran a whole suite
 # against last week's abilities and reported them missing.
-if [ -f "$RUN/../build/libs/customweapons-1.0.0.jar" ]; then
-    cp "$RUN/../build/libs/customweapons-1.0.0.jar" mods/customweapons-1.0.0.jar
+if [ -f "$RUN/../build/libs/customweapons-1.6.0.jar" ]; then
+    cp "$RUN/../build/libs/customweapons-1.6.0.jar" mods/customweapons-1.6.0.jar
 fi
-echo "== mod jar: $(ls -la mods/customweapons-1.0.0.jar | awk '{print $5, $6, $7, $8}') =="
+echo "== mod jar: $(ls -la mods/customweapons-1.6.0.jar | awk '{print $5, $6, $7, $8}') =="
 java -Xmx1500M -jar fabric-server-launch.jar nogui < console.fifo > test.log 2>&1 &
 SERVER_PID=$!
 # Hold the FIFO open, or the server sees EOF on stdin and shuts itself down.
@@ -204,6 +204,7 @@ assert_log "no exception out of the effects player or its display mixins" \
 assert_log "no leftover effect entities had to be swept on a fresh world" \
            "Removed [0-9]+ leftover effect entities"                          -eq 0
 # Rigid freeze: the knockback mixin and the stun list never raise from a hit or a kill.
+assert_log "every ultimate fired at least once"            "ULTIMATE (crimson_nova|tempest|thunderstorm|earthquake|absolute_zero|maelstrom|inferno|judgement|void_collapse|meteor_shower) player=Smith" -ge 10
 assert_log "no exception out of the knockback mixin or the stuns" \
            "dev\.customweapons\.(mixin\.KnockbackMixin|Stuns)"                        -eq 0
 

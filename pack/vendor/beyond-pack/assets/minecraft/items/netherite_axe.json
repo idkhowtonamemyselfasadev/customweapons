@@ -1,0 +1,105 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "cases": [
+      {
+        "when": "beyond:aeternium_axe",
+        "model": {
+          "type": "minecraft:model",
+          "model": "beyond:item/aeternium_axe"
+        }
+      },
+      {
+        "when": "cw:aegis_hammer",
+        "model": {
+          "type": "minecraft:range_dispatch",
+          "property": "minecraft:custom_model_data",
+          "index": 0,
+          "entries": [
+            {
+              "threshold": 1,
+              "model": {
+                "type": "minecraft:model",
+                "model": "customweapons:item/aegis_hammer_f1"
+              }
+            },
+            {
+              "threshold": 2,
+              "model": {
+                "type": "minecraft:model",
+                "model": "customweapons:item/aegis_hammer_f2"
+              }
+            },
+            {
+              "threshold": 3,
+              "model": {
+                "type": "minecraft:model",
+                "model": "customweapons:item/aegis_hammer_f3"
+              }
+            },
+            {
+              "threshold": 4,
+              "model": {
+                "type": "minecraft:model",
+                "model": "customweapons:item/aegis_hammer_f4"
+              }
+            },
+            {
+              "threshold": 5,
+              "model": {
+                "type": "minecraft:model",
+                "model": "customweapons:item/aegis_hammer_f5"
+              }
+            },
+            {
+              "threshold": 6,
+              "model": {
+                "type": "minecraft:model",
+                "model": "customweapons:item/aegis_hammer_f6"
+              }
+            },
+            {
+              "threshold": 7,
+              "model": {
+                "type": "minecraft:model",
+                "model": "customweapons:item/aegis_hammer_f7"
+              }
+            },
+            {
+              "threshold": 8,
+              "model": {
+                "type": "minecraft:model",
+                "model": "customweapons:item/aegis_hammer_f8"
+              }
+            },
+            {
+              "threshold": 9,
+              "model": {
+                "type": "minecraft:model",
+                "model": "customweapons:item/aegis_hammer_f9"
+              }
+            },
+            {
+              "threshold": 10,
+              "model": {
+                "type": "minecraft:model",
+                "model": "customweapons:item/aegis_hammer_f10"
+              }
+            }
+          ],
+          "fallback": {
+            "type": "minecraft:model",
+            "model": "customweapons:item/aegis_hammer"
+          }
+        }
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "minecraft:item/netherite_axe"
+    }
+  },
+  "hand_animation_on_swap": false
+}

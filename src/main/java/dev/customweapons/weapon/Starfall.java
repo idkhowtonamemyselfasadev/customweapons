@@ -28,6 +28,9 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
+import dev.customweapons.Ultimate;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -247,5 +250,34 @@ public final class Starfall extends CustomWeapon {
     @Override
     public void forget(UUID player) {
         comets.remove(player);
+    }
+
+    // ---- ultimate: Meteor Shower -----------------------------------------------------------------
+    public static final String METEOR_SHOWER = "meteor_shower";
+
+    @Override
+    public void onUltimate(ServerPlayer player, ItemStack weapon, WeaponsConfig config) {
+        if (!Ultimate.ready(player, METEOR_SHOWER, "Meteor Shower")) {
+            return;
+        }
+        ServerLevel level = (ServerLevel) player.level();
+        int hit = 0;
+        for (LivingEntity victim : Ultimate.targets(player, config.meteor_shower_radius)) {
+            if (Ultimate.strike(player, victim, config.meteor_shower_damage)) {
+                hit++;
+            }
+            Ultimate.fling(player, victim, 0.9, 0.6);
+            victim.igniteForTicks(60);
+            CustomWeapons.effects().play(level, "meteor_impact", victim);
+        }
+        CustomWeapons.state().grantFallImmunity(player, 120);
+        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, player.getX(), player.getY() + 1, player.getZ(), 3, 2, 0.5, 2, 0);
+        level.sendParticles(ParticleTypes.LAVA, player.getX(), player.getY() + 1, player.getZ(), 60, 4, 1, 4, 0.2);
+        Ultimate.fired(player, this, METEOR_SHOWER, config.meteor_shower_cooldown_ticks, "Meteor Shower", hit, SoundEvents.GENERIC_EXPLODE.value(), 0.4f, config);
+    }
+
+    @Override
+    public String ultimateLore(WeaponsConfig config) {
+        return String.format("Meteor Shower - %.1f true damage to everything within %.0f blocks, knocked away and set alight. %ds", config.meteor_shower_damage, config.meteor_shower_radius, config.meteor_shower_cooldown_ticks / 20);
     }
 }

@@ -23,6 +23,7 @@ NS = "customweapons"
 PACK = os.path.join(ROOT, "customweapons-models")
 ZIP = os.path.join(os.path.dirname(ROOT), "release", "CustomWeapons-Models.zip")
 PREVIEW = os.path.join(ROOT, "preview.html")
+VENDOR = os.path.join(ROOT, "vendor", "beyond-pack")
 
 # The vanilla 1.21.11 model trees these definitions fall back to, copied from the client.
 VANILLA = {
@@ -117,6 +118,39 @@ ANIMS = {
               (0.45, (-6, 0, 2), (0.15, 0.4, 0.7), 1.03),
               (1.0, (0, 0, 0), (0, 0, 0), 1.0)],
 }
+# The ultimates (sneak + left-click, frames 11..20): bigger motions than the ability ones,
+# each a different shape - a full spin, a raise-and-slam, a sky-point, a sweep.
+ULT_ANIMS = {
+    "spin": [(0.0, (0, 0, 0), (0, 0, 0), 1.0),            # the blade whipped round once
+             (0.2, (-25, 60, 30), (-0.6, 0.8, -0.3), 1.05),
+             (0.5, (10, 200, -40), (0.8, 0.2, -1.6), 1.12),
+             (0.75, (20, 320, -20), (0.3, -0.5, -1.0), 1.05),
+             (1.0, (0, 360, 0), (0, 0, 0), 1.0)],
+    "raise_slam": [(0.0, (0, 0, 0), (0, 0, 0), 1.0),      # lifted high, driven into the ground
+                   (0.35, (-70, 0, 12), (0, 3.5, 0.8), 1.08),
+                   (0.55, (55, 0, -20), (0.4, -3.0, -2.2), 1.18),
+                   (0.75, (45, 0, -16), (0.4, -2.6, -1.8), 1.08),
+                   (1.0, (0, 0, 0), (0, 0, 0), 1.0)],
+    "sky": [(0.0, (0, 0, 0), (0, 0, 0), 1.0),             # pointed at the sky and held there
+            (0.25, (-90, 0, 0), (0.2, 3.0, -0.5), 1.05),
+            (0.65, (-95, 0, 0), (0.2, 3.4, -0.5), 1.15),
+            (1.0, (0, 0, 0), (0, 0, 0), 1.0)],
+    "sweep": [(0.0, (0, 0, 0), (0, 0, 0), 1.0),           # a wide horizontal sweep
+              (0.2, (0, 70, 20), (-1.6, 0.5, 0.4), 1.05),
+              (0.55, (0, -80, -20), (1.8, -0.3, -1.2), 1.12),
+              (0.8, (0, -30, -8), (0.6, 0, -0.5), 1.03),
+              (1.0, (0, 0, 0), (0, 0, 0), 1.0)],
+    "recoil": [(0.0, (0, 0, 0), (0, 0, 0), 1.0),          # a huge shot: the weapon kicks back hard
+               (0.12, (-35, 8, 0), (0.6, 1.4, 2.6), 1.2),
+               (0.4, (-12, 3, 0), (0.3, 0.6, 1.0), 1.08),
+               (0.7, (4, -1, 0), (-0.1, 0.1, 0.3), 1.02),
+               (1.0, (0, 0, 0), (0, 0, 0), 1.0)],
+}
+WEAPON_ULT = {
+    "bloodletter": "spin", "frostbrand": "sky", "gale_edge": "spin", "tidecaller": "sweep",
+    "aegis_hammer": "raise_slam", "stormpiercer": "sky", "hellfire": "recoil",
+    "dawnbreaker": "sky", "voidreaper": "sweep", "starfall": "raise_slam",
+}
 WEAPON_ANIM = {
     "bloodletter": "slash", "frostbrand": "slash", "gale_edge": "thrust", "tidecaller": "thrust",
     "aegis_hammer": "slam", "stormpiercer": "shot", "hellfire": "blast",
@@ -170,16 +204,21 @@ def frame_models(weapon, builder, display):
     """One full model per frame: the weapon, its trail or flash for that frame, and the
     hand pose for that frame."""
     keys = ANIMS[WEAPON_ANIM[weapon]]
+    ult = ULT_ANIMS[WEAPON_ULT[weapon]]
     out = {}
     for frame in range(1, FRAMES + 1):
         model, _ = weapons.build_frame(weapon, builder, display, frame, NS)
         model["display"] = display if os.environ.get("CW_NOPOSE") else frame_display(display, keys, frame)
         out[f"{weapon}_f{frame}"] = model
+        # The ultimate's frame: the same trail/flash geometry, the bigger pose.
+        ult_model, _ = weapons.build_frame(weapon, builder, display, frame, NS)
+        ult_model["display"] = display if os.environ.get("CW_NOPOSE") else frame_display(display, ult, frame)
+        out[f"{weapon}_f{FRAMES + frame}"] = ult_model
     if os.environ.get("CW_DEBUG_FRAMES"):
         # 11: the resting model re-parented with frame 5's pose; 12: frame 5's geometry, resting pose
-        out[f"{weapon}_f11"] = {"parent": f"{NS}:item/{weapon}", "display": frame_display(display, keys, 5)}
-        m12, _ = weapons.build_frame(weapon, builder, display, 5, NS)
-        out[f"{weapon}_f12"] = m12
+        out[f"{weapon}_f21"] = {"parent": f"{NS}:item/{weapon}", "display": frame_display(display, keys, 5)}
+        m22, _ = weapons.build_frame(weapon, builder, display, 5, NS)
+        out[f"{weapon}_f22"] = m22
     return out
 
 
@@ -188,7 +227,7 @@ def animated(weapon, idle_tree):
     return {
         "type": "minecraft:range_dispatch", "property": "minecraft:custom_model_data", "index": 0,
         "entries": [{"threshold": k, "model": m(f"{weapon}_f{k}")}
-                    for k in range(1, FRAMES + (3 if os.environ.get("CW_DEBUG_FRAMES") else 1))],
+                    for k in range(1, 2 * FRAMES + (3 if os.environ.get("CW_DEBUG_FRAMES") else 1))],
         "fallback": idle_tree,
     }
 
@@ -269,16 +308,44 @@ def write_pack():
     textures = weapons.textures(NS)
     for weapon, img in textures.items():
         img.save(os.path.join(tex_dir, weapon + ".png"))
-    for base, definition in item_definitions().items():
+    definitions = item_definitions()
+    # Beyond the End's item models ride along (a snapshot of its built pack in pack/vendor):
+    # both mods override the same five vanilla item files, a client keeps one file per
+    # path, so each pack carries the other's cases and the two servers packs agree.
+    vendored = 0
+    if os.path.isdir(VENDOR):
+        for folder, _, files in os.walk(os.path.join(VENDOR, "assets", "beyond")):
+            for fn in files:
+                src = os.path.join(folder, fn)
+                dst = os.path.join(PACK, os.path.relpath(src, VENDOR))
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copy(src, dst)
+                vendored += 1
+        their_items = os.path.join(VENDOR, "assets", "minecraft", "items")
+        for fn in sorted(os.listdir(their_items)):
+            base = fn[:-5]
+            with open(os.path.join(their_items, fn)) as f:
+                theirs = json.load(f)
+            their_cases = [c for c in theirs["model"]["cases"] if str(c.get("when", "")).startswith("beyond:")]
+            if base in definitions:
+                definitions[base]["model"]["cases"] += their_cases
+            else:
+                definitions[base] = theirs
+        print(f"folded in {vendored} Beyond the End files")
+    for base, definition in definitions.items():
         with open(os.path.join(items_dir, base + ".json"), "w") as f:
             json.dump(definition, f, indent=2)
 
     os.makedirs(os.path.dirname(ZIP), exist_ok=True)
+    # Fixed timestamps: the sha1 the server config carries only changes with content.
     with zipfile.ZipFile(ZIP, "w", zipfile.ZIP_DEFLATED) as z:
-        for folder, _, files in os.walk(PACK):
-            for name in files:
+        for folder, _, files in sorted(os.walk(PACK)):
+            for name in sorted(files):
                 path = os.path.join(folder, name)
-                z.write(path, os.path.relpath(path, PACK))
+                info = zipfile.ZipInfo(os.path.relpath(path, PACK), date_time=(2026, 1, 1, 0, 0, 0))
+                info.compress_type = zipfile.ZIP_DEFLATED
+                with open(path, "rb") as f:
+                    z.writestr(info, f.read())
     return models, textures, counts, frames
 
 

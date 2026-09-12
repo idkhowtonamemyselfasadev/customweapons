@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Custom Weapons — abilities</title>
+<style>
+  :root { --bg: #14161c; --panel: #1d2028; --line: #2c3040; --text: #e8e9ee; --muted: #9aa0b2; --accent: #ffb347; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 0 20px 60px; }
+  header, main { max-width: 900px; margin: 0 auto; }
+  header { padding: 44px 0 20px; border-bottom: 1px solid var(--line); }
+  h1 { margin: 0 0 6px; font-size: 36px; letter-spacing: -0.5px; }
+  h1 span { color: var(--accent); }
+  .lead { color: var(--muted); margin: 0; }
+  nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; }
+  nav a { color: var(--text); text-decoration: none; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 14px; }
+  nav a:hover { border-color: var(--accent); }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 22px; margin-top: 18px; }
+  h2 { margin: 0; font-size: 22px; }
+  h2 small { color: var(--muted); font-weight: 400; font-size: 14px; margin-left: 8px; }
+  .stats { color: var(--muted); font-size: 14px; margin: 6px 0 12px; }
+  .stats b { color: var(--text); font-weight: 600; }
+  ul { margin: 0; padding-left: 20px; }
+  li { margin: 6px 0; }
+  li b { color: var(--accent); }
+  .tag { display: inline-block; font-size: 12px; padding: 1px 7px; border-radius: 5px; background: #2b2f3a; color: var(--muted); margin-left: 6px; vertical-align: middle; }
+  footer { max-width: 900px; margin: 36px auto 0; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1><span>Custom Weapons</span> — the ten legendaries</h1>
+  <p class="lead">Three of each exist on the whole server, found in temples and claimed at their altars. Every one matches or beats its vanilla base on raw damage, and the ability is on top. Right-click = the active ability; the rest is passive.</p>
+  <nav>
+    <a href="#bloodletter">Bloodletter</a><a href="#galeedge">Gale Edge</a><a href="#stormpiercer">Stormpiercer</a><a href="#aegis">Aegis Hammer</a><a href="#frostbrand">Frostbrand</a>
+    <a href="#tidecaller">Tidecaller</a><a href="#hellfire">Hellfire</a><a href="#dawnbreaker">Dawnbreaker</a><a href="#voidreaper">Voidreaper</a><a href="#starfall">Starfall</a>
+  </nav>
+</header>
+<main>
+
+<section id="bloodletter">
+  <h2>Bloodletter <small>netherite sword</small></h2>
+  <div class="stats"><b>4.0</b> damage · <b>2.0</b> speed · 8.0 DPS from swings + 9.0 from bleed = <b>17.0</b> · no cooldown</div>
+  <ul>
+    <li><b>Bleed</b> (passive): every hit applies or refreshes Bleed for 3 s, stacking to 3. Each stack does 1.5 every 0.5 s — 9.0 DPS at three stacks.</li>
+    <li>Each bleed has a 12.0 damage budget; when it's spent the bleed ends, and a fresh hit refills it.</li>
+    <li>One bleed per victim; kills are credited to whoever applied it. Cleared by milk, death or changing dimension.</li>
+    <li><b>Exsanguinate</b> (right-click, 20 s): every bleed you own within 8 blocks bursts — the rest of its budget lands at once as one hit — and you heal 2.0 per stack burst. Nothing bleeding nearby = costs nothing.</li>
+  </ul>
+</section>
+
+<section id="galeedge">
+  <h2>Gale Edge <small>diamond sword</small></h2>
+  <div class="stats"><b>7.0</b> damage · <b>1.8</b> speed · 12.6 DPS, +4.0 after a dash · 8 s cooldown</div>
+  <ul>
+    <li><b>Dash</b> (right-click, 8 s): launches you along your look direction (upward angle capped, so looking up isn't a rocket). 6 s of fall immunity.</li>
+    <li><b>Momentum Strike</b>: the next hit within 2 s of a dash does +4.0.</li>
+    <li>One dash in the air. Airborne with it spent, the click does nothing and doesn't use the cooldown.</li>
+  </ul>
+</section>
+
+<section id="stormpiercer">
+  <h2>Stormpiercer <small>bow</small></h2>
+  <div class="stats"><b>10.0</b> at full draw (no crit roll), +6.0 with the shock · 30 s cooldown · <b>unbreakable</b> · cannot be enchanted</div>
+  <ul>
+    <li>A fully drawn arrow hits for exactly 10.0 before armour; partial draws scale down.</li>
+    <li><b>Shock</b>: when ready, a fully drawn hit does 16.0, <b>calls lightning down on the target</b>, gives Glowing for 6 s, and chains 3.0 to one other creature within 5 blocks. Charged on the hit, so a miss costs nothing.</li>
+    <li><b>Stun</b>: the shocked target is rooted for 2 s — can't move or jump.</li>
+    <li><b>Execute</b>: a fully drawn hit kills a creeper or a skeleton outright (never players). Normal loot and XP.</li>
+    <li>The bolt is visual by default: flash and thunder, no fire, no charged creepers.</li>
+    <li>No enchantments at all — you trade Power, Flame and Infinity for the shock.</li>
+  </ul>
+</section>
+
+<section id="aegis">
+  <h2>Aegis Hammer <small>netherite axe</small></h2>
+  <div class="stats"><b>11.0</b> damage · <b>0.9</b> speed · 9.9 DPS, slam 8.0 · 15 s cooldown</div>
+  <ul>
+    <li><b>Ground Slam</b> (right-click on the ground, 15 s): 8.0 damage, Slowness II for 4 s and a pop-up to everything within 5 blocks that can see you; Resistance I for 5 s for you. Does nothing in mid-air.</li>
+    <li><b>Stagger</b> (passive): every third hit within 3 s of the last stuns the target for 1 s — rooted, can't jump, still takes knockback.</li>
+    <li>It's an axe, so it still disables shields like vanilla.</li>
+  </ul>
+</section>
+
+<section id="frostbrand">
+  <h2>Frostbrand <small>iron sword</small></h2>
+  <div class="stats"><b>8.0</b> damage · <b>1.6</b> speed · 12.8 DPS, shatter +8.0 · beam 30 s</div>
+  <ul>
+    <li><b>Ice Beam</b> (right-click, 30 s): a ray of ice up to 24 blocks. The first thing it touches takes 6.0 and is <b>frozen solid for 3 s</b> — can't move, jump or be knocked back — then the ice bursts. A beam that hits nothing still costs the cooldown.</li>
+    <li><b>Frost</b> (passive): every hit adds freeze (the powder-snow effect: screen frosts over, mobs shiver) and Slowness II for 2 s.</li>
+    <li><b>Shatter</b>: three hits in a row freeze the target; the third does +8.0 and Slowness IV for 2 s, then the frost resets. Hit faster than they thaw.</li>
+  </ul>
+</section>
+
+<section id="tidecaller">
+  <h2>Tidecaller <small>trident</small></h2>
+  <div class="stats"><b>10.0</b> damage · <b>1.1</b> speed · 11.0 DPS, +4.0 on wet targets · 10 s cooldown</div>
+  <ul>
+    <li><b>Harpoon</b>: a thrown hit <b>drags the target to you</b>. 10 s cooldown, charged on the hit — a miss costs nothing. Loyalty and Riptide still work.</li>
+    <li><b>Tide</b> (passive): thrown or swung, anything standing in water or rain takes +4.0.</li>
+  </ul>
+</section>
+
+<section id="hellfire">
+  <h2>Hellfire <small>crossbow</small></h2>
+  <div class="stats">bolt + blast · 8 s cooldown</div>
+  <ul>
+    <li><b>Exploding bolt</b>: the first bolt after the cooldown <b>explodes where it lands</b> — on a creature or in the ground. About 15 before armour on a direct hit, falling off fast. Charged on the shot.</li>
+    <li>Breaks no blocks. It does hurt you at your own feet like TNT would.</li>
+    <li>Multishot: one blast per volley, not three.</li>
+  </ul>
+</section>
+
+<section id="dawnbreaker">
+  <h2>Dawnbreaker <small>golden sword</small></h2>
+  <div class="stats"><b>9.0</b> damage, +2.0 by day · <b>1.7</b> speed · 15.3 DPS by day, sunstrike 9.0 · 15 s cooldown · <b>unbreakable</b></div>
+  <ul>
+    <li><b>Sunstrike</b> (right-click, 15 s): the spot you're looking at (block or creature, up to 24 blocks) is marked, and one second later a <b>pillar of sunlight</b> lands: 9.0 to everything within 3 blocks, <b>double to the undead</b>, sets them alight for 4 s. Looking at the sky does nothing and costs nothing.</li>
+    <li><b>Solar Brand</b> (passive): every hit burns for 3 s; while it's bright outside every hit does +2.0.</li>
+    <li><b>Daylight</b> (passive): a kill heals you 4.0.</li>
+  </ul>
+</section>
+
+<section id="voidreaper">
+  <h2>Voidreaper <small>netherite hoe — a scythe</small></h2>
+  <div class="stats"><b>10.0</b> damage · <b>1.3</b> speed · 13.0 DPS, backstab +6.0 · 12 s cooldown</div>
+  <ul>
+    <li><b>Rift</b> (right-click, 12 s): the first creature along your look within 12 blocks is marked; you're torn through the void and appear <b>right behind it</b>, facing it. Nothing marked = nothing happens, no cooldown.</li>
+    <li><b>Backstab</b>: your next hit within 2 s of a Rift does +6.0.</li>
+    <li><b>Wither</b> (passive): every hit withers for 2 s.</li>
+    <li><b>Soul Harvest</b> (passive): a kill heals you 4.0 and gives 4 absorption for 10 s.</li>
+  </ul>
+</section>
+
+<section id="starfall">
+  <h2>Starfall <small>mace</small></h2>
+  <div class="stats"><b>8.0</b> damage · <b>0.7</b> speed · 5.6 DPS, impact 8.0 in 4 blocks · 20 s cooldown</div>
+  <ul>
+    <li><b>Comet</b> (right-click from the ground, 20 s): you're launched about 14 blocks straight up with 6 s of fall immunity, falling as a comet for 5 s.</li>
+    <li><b>Impact</b>: while falling as a comet, your first hit <b>or</b> touching the ground is the impact — 8.0 to everything within 4 blocks, knocked away and set alight for 2 s. The vanilla mace smash still lands on top.</li>
+    <li><b>Heavy</b> (passive): every hit shoves the target half a block further along your swing.</li>
+  </ul>
+</section>
+
+</main>
+<footer>Custom Weapons v1.5 · all numbers are the defaults in <code>config/customweapons.json</code></footer>
+</body>
+</html>

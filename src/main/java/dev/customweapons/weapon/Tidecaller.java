@@ -26,6 +26,9 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
+import dev.customweapons.Ultimate;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import java.util.List;
 
 /**
@@ -155,6 +158,10 @@ public final class Tidecaller extends CustomWeapon {
             return;
         }
         Vec3 pull = toShooter.normalize().scale(config.harpoon_pull_power);
+        // The hook bites: true damage as the target is dragged in (the pull alone did none).
+        if (config.harpoon_damage > 0) {
+            dev.customweapons.Ultimate.strike(shooter, victim, config.harpoon_damage);
+        }
         victim.setDeltaMovement(pull.x, pull.y + config.harpoon_pull_lift, pull.z);
         victim.hurtMarked = true;
         if (victim instanceof ServerPlayer hit) {
@@ -186,5 +193,33 @@ public final class Tidecaller extends CustomWeapon {
         }
         shooter.displayClientMessage(Component.literal("Harpoon")
                 .withStyle(ChatFormatting.DARK_AQUA), true);
+    }
+
+    // ---- ultimate: Maelstrom ---------------------------------------------------------------------
+    public static final String MAELSTROM = "maelstrom";
+
+    @Override
+    public void onUltimate(ServerPlayer player, ItemStack weapon, WeaponsConfig config) {
+        if (!Ultimate.ready(player, MAELSTROM, "Maelstrom")) {
+            return;
+        }
+        ServerLevel level = (ServerLevel) player.level();
+        int hit = 0;
+        for (LivingEntity victim : Ultimate.targets(player, config.maelstrom_radius)) {
+            if (Ultimate.strike(player, victim, config.maelstrom_damage)) {
+                hit++;
+            }
+            Ultimate.fling(player, victim, -config.maelstrom_pull, 0.3);   // towards the player
+            victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 80, 1));
+            CustomWeapons.effects().play(level, "tide_splash", victim);
+        }
+        player.addEffect(new MobEffectInstance(MobEffects.CONDUIT_POWER, 200, 0));
+        level.sendParticles(ParticleTypes.SPLASH, player.getX(), player.getY() + 1, player.getZ(), 200, 4, 1, 4, 0.1);
+        Ultimate.fired(player, this, MAELSTROM, config.maelstrom_cooldown_ticks, "Maelstrom", hit, SoundEvents.TRIDENT_RIPTIDE_3.value(), 0.6f, config);
+    }
+
+    @Override
+    public String ultimateLore(WeaponsConfig config) {
+        return String.format("Maelstrom - drags everything within %.0f blocks to you for %.1f true damage. %ds", config.maelstrom_radius, config.maelstrom_damage, config.maelstrom_cooldown_ticks / 20);
     }
 }

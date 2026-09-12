@@ -9,7 +9,8 @@
     "BlockDisplayInvoker",
     "KnockbackMixin",
     "LevelDestroyMixin",
-    "ServerExplosionMixin"
+    "ServerExplosionMixin",
+    "SwingMixin"
   ],
   "injectors": {
     "defaultRequire": 1

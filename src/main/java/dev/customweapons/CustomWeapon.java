@@ -60,6 +60,18 @@ public abstract class CustomWeapon {
         return InteractionResult.PASS;
     }
 
+    /**
+     * The ultimate: sneak + left-click with the weapon in hand. Hits everything around the
+     * player, on a cooldown of up to a minute. See {@link Ultimate}.
+     */
+    public void onUltimate(ServerPlayer player, ItemStack weapon, WeaponsConfig config) {
+    }
+
+    /** One line for the tooltip describing the ultimate; null for none. */
+    public String ultimateLore(WeaponsConfig config) {
+        return null;
+    }
+
     /** A melee hit with the weapon that actually dealt damage. */
     public void onHit(ServerPlayer attacker, LivingEntity victim, ItemStack weapon,
                       float damageDealt, WeaponsConfig config) {

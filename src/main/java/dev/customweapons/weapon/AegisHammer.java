@@ -29,6 +29,7 @@ import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import dev.customweapons.Ultimate;
 import java.util.List;
 
 /**
@@ -229,5 +230,37 @@ public final class AegisHammer extends CustomWeapon {
         }
         level.sendParticles(ParticleTypes.EXPLOSION, player.getX(), player.getY() + 0.2, player.getZ(),
                 1, 0.0, 0.0, 0.0, 0.0);
+    }
+
+    // ---- ultimate: Earthquake --------------------------------------------------------------------
+    public static final String EARTHQUAKE = "earthquake";
+
+    @Override
+    public void onUltimate(ServerPlayer player, ItemStack weapon, WeaponsConfig config) {
+        if (!player.onGround()) {
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal("Earthquake needs the ground").withStyle(ChatFormatting.GRAY), true);
+            return;
+        }
+        if (!Ultimate.ready(player, EARTHQUAKE, "Earthquake")) {
+            return;
+        }
+        ServerLevel level = (ServerLevel) player.level();
+        int hit = 0;
+        for (LivingEntity victim : Ultimate.targets(player, config.earthquake_radius)) {
+            if (Ultimate.strike(player, victim, config.earthquake_damage)) {
+                hit++;
+            }
+            Ultimate.fling(player, victim, 0.6, 0.9);
+            victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 100, 2));
+        }
+        player.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, 160, 1));
+        CustomWeapons.effects().play(level, "slam_wave", player.position(), null);
+        level.sendParticles(ParticleTypes.EXPLOSION, player.getX(), player.getY(), player.getZ(), 12, 3, 0.2, 3, 0);
+        Ultimate.fired(player, this, EARTHQUAKE, config.earthquake_cooldown_ticks, "Earthquake", hit, SoundEvents.GENERIC_EXPLODE.value(), 0.5f, config);
+    }
+
+    @Override
+    public String ultimateLore(WeaponsConfig config) {
+        return String.format("Earthquake - %.1f true damage to everything within %.0f blocks, launched and slowed; Resistance II for you. %ds", config.earthquake_damage, config.earthquake_radius, config.earthquake_cooldown_ticks / 20);
     }
 }
