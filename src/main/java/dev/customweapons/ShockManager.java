@@ -104,13 +104,18 @@ public final class ShockManager {
                 15, 0.3, 0.4, 0.3, 0.05);
 
         double dealt = damage;
-        LivingEntity chained = nearest(level, victim, shooter, config.shock_chain_range);
-        if (chained != null) {
-            Hurt.deal(chained, shooter != null
-                    ? chained.damageSources().indirectMagic(arrow, shooter)
-                    : chained.damageSources().magic(), (float) config.shock_chain_damage);
+        // The arc jumps to the nearest others, each one stunned and shocked in turn.
+        List<LivingEntity> chain = nearestSeveral(level, victim, shooter, config.shock_chain_range, Math.max(0, config.shock_chain_targets));
+        LivingEntity chained = chain.isEmpty() ? null : chain.get(0);
+        for (LivingEntity next : chain) {
+            Hurt.deal(next, shooter != null
+                    ? next.damageSources().indirectMagic(arrow, shooter)
+                    : next.damageSources().magic(), (float) config.shock_chain_damage);
             drawArc(level, victim.position().add(0, victim.getBbHeight() * 0.6, 0),
-                    chained.position().add(0, chained.getBbHeight() * 0.6, 0));
+                    next.position().add(0, next.getBbHeight() * 0.6, 0));
+            if (next.isAlive()) {
+                stun(next, config);
+            }
             dealt += config.shock_chain_damage;
         }
 
@@ -122,7 +127,7 @@ public final class ShockManager {
         }
         if (shooter != null) {
             cooldowns.set(shooter, KEY, config.shock_cooldown_ticks);
-            String label = executed ? "Shock  (executed)" : chained != null ? "Shock  (chained)" : "Shock";
+            String label = executed ? "Shock  (executed)" : chained != null ? "Shock  (chained x" + chain.size() + ")" : "Shock";
             shooter.displayClientMessage(Component.literal(label)
                     .withStyle(ChatFormatting.AQUA), true);
         }
@@ -179,6 +184,19 @@ public final class ShockManager {
     }
 
     /** Never the shooter, never the entity already hit, never something already dead. */
+    /** The nearest {@code count} living things around the target, closest first. */
+    private List<LivingEntity> nearestSeveral(ServerLevel level, LivingEntity target, ServerPlayer shooter, double range, int count) {
+        AABB box = target.getBoundingBox().inflate(range);
+        List<LivingEntity> candidates = new java.util.ArrayList<>(level.getEntitiesOfClass(LivingEntity.class, box, entity ->
+                entity != target
+                        && entity != shooter
+                        && entity.isAlive()
+                        && !(entity instanceof Player player && (player.isCreative() || player.isSpectator()))
+                        && entity.distanceTo(target) <= range));
+        candidates.sort((a, b) -> Double.compare(a.distanceToSqr(target), b.distanceToSqr(target)));
+        return candidates.subList(0, Math.min(count, candidates.size()));
+    }
+
     private LivingEntity nearest(ServerLevel level, LivingEntity target, ServerPlayer shooter, double range) {
         AABB box = target.getBoundingBox().inflate(range);
         List<LivingEntity> candidates = level.getEntitiesOfClass(LivingEntity.class, box, entity ->

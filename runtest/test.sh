@@ -92,10 +92,10 @@ JSON
 mkfifo console.fifo
 # Always test the jar that was just built: a stale copy in mods/ once ran a whole suite
 # against last week's abilities and reported them missing.
-if [ -f "$RUN/../build/libs/customweapons-1.6.2.jar" ]; then
-    cp "$RUN/../build/libs/customweapons-1.6.2.jar" mods/customweapons-1.6.2.jar
+if [ -f "$RUN/../build/libs/customweapons-1.6.3.jar" ]; then
+    cp "$RUN/../build/libs/customweapons-1.6.3.jar" mods/customweapons-1.6.3.jar
 fi
-echo "== mod jar: $(ls -la mods/customweapons-1.6.2.jar | awk '{print $5, $6, $7, $8}') =="
+echo "== mod jar: $(ls -la mods/customweapons-1.6.3.jar | awk '{print $5, $6, $7, $8}') =="
 java -Xmx1500M -jar fabric-server-launch.jar nogui < console.fifo > test.log 2>&1 &
 SERVER_PID=$!
 # Hold the FIFO open, or the server sees EOF on stdin and shuts itself down.
@@ -164,9 +164,9 @@ FULL_DRAWS=$(grep -oE "full draws fired with the shock ready: [0-9]+" bots.log |
 assert_log "exactly one arrow armed per ready full draw (${FULL_DRAWS:-?} fired), none for the partial or cooldown ones" \
            "ABILITY shock arm"                                                -eq "${FULL_DRAWS:-1}"
 assert_log "the shock landed"                       "ABILITY shock hit"               -ge 1
-assert_log "the shock on Dummy was the +6.0 bonus alone, nothing chained" \
-           "ABILITY shock hit victim=Dummy chained=none total=6.0"            -ge 1
-assert_log "the shock stunned the target"          "ABILITY stun victim=Dummy ticks=40" -ge 1
+assert_log "the shock on Dummy was the +12.0 bonus alone, nothing chained" \
+           "ABILITY shock hit victim=Dummy chained=none total=12.0"           -ge 1
+assert_log "the shock stunned the target"          "ABILITY stun victim=Dummy ticks=60" -ge 1
 assert_log "the shock executed a creeper"           "ABILITY shock hit victim=Creeper .* executed=true" -ge 1
 assert_log "frost stacked on a target"              "ABILITY frost"                   -ge 2
 assert_log "the shatter fired"                      "ABILITY shatter"                 -ge 1
@@ -182,7 +182,9 @@ assert_log "the backstab landed"                    "ABILITY backstab player=Smi
 assert_log "the Soul Harvest fed the wielder"       "ABILITY harvest player=Smith victim=Zombie heal=4.0" -ge 1
 assert_log "the Comet launched"                     "ABILITY comet player=Smith"             -ge 1
 assert_log "the landing was the impact and hit Dummy" "ABILITY impact player=Smith hits=1 .* struck=ground" -ge 1
-assert_log "the Exsanguinate burst one bleed"       "ABILITY exsanguinate player=Smith victims=1" -ge 1
+assert_log "Rage gave Strength I"                    "ABILITY rage player=Smith strength=1"        -ge 1
+assert_log "Absolute Zero shattered on the thaw"      "ABILITY absolute_zero_shatter player=Smith"  -ge 1
+assert_log "Double Strike landed the hit again"       "ABILITY double_strike player=Smith"           -ge 1
 assert_log "the Stagger stunned Dummy"              "ABILITY stagger player=Smith victim=Dummy" -ge 1
 assert_log "a Hellfire bolt was armed"              "ABILITY hellfire arm"            -ge 1
 assert_log "the Hellfire bolt exploded"             "ABILITY hellfire explode"        -ge 1
