@@ -32,20 +32,17 @@ public final class WeaponsConfig {
     public int bleed_max_stacks = 3;
     public int bleed_duration_ticks = 60;
     public int bleed_tick_interval_ticks = 10;
-    /** 1.5 per stack every 10 ticks = 3.0 DPS per stack, 9.0 DPS at three stacks. */
-    public double bleed_damage_per_stack = 1.5;
+    /** 1.0 per stack every 10 ticks = 2.0 DPS per stack, 6.0 DPS at three stacks (was 1.5, debuffed 2026-09-13). */
+    public double bleed_damage_per_stack = 1.0;
     /**
      * Total damage one bleed instance may deal before it ends, refilled by a fresh hit.
      * Without this, 6.0 DPS on a window that every hit refreshes never stops.
      */
-    public double bleed_damage_budget = 12.0;
-    /**
-     * Exsanguinate, on right-click: every bleed the wielder owns within this many blocks
-     * bursts - its whole remaining budget lands at once - and each stack burst heals them.
-     */
-    public double exsanguinate_radius = 8.0;
-    public double exsanguinate_heal_per_stack = 2.0;
-    public int exsanguinate_cooldown_ticks = 400;
+    public double bleed_damage_budget = 9.0;
+    /** Rage, on right-click: Strength (amplifier 0 = Strength I) for a while, then a cooldown. */
+    public int rage_duration_ticks = 200;
+    public int rage_amplifier = 0;
+    public int rage_cooldown_ticks = 600;
 
     // ------------------------------------------------------------------ Gale Edge
     public boolean gale_edge_enabled = true;
@@ -69,17 +66,19 @@ public final class WeaponsConfig {
      * the Stormpiercer never crits, so the number is the number.
      */
     public double stormpiercer_full_damage = 10.0;
-    public int shock_cooldown_ticks = 600;
+    public int shock_cooldown_ticks = 300;             // 15 s, was 30 (the shock got its buff 2026-09-13)
     /**
      * A bow shoots at {@code charge * 3.0} blocks/tick, so 2.7 is a draw of 0.9. Reading the
      * charge off the arrow's speed avoids needing a mixin on the bow.
      */
     public double shock_min_arrow_speed = 2.7;
-    /** On top of the arrow: 10 + 6 = 16, eight hearts, when the lightning is ready. */
-    public double shock_bonus_damage = 6.0;
+    /** On top of the arrow: 10 + 12 = 22, eleven hearts, when the lightning is ready. */
+    public double shock_bonus_damage = 12.0;
     public int shock_glowing_ticks = 120;
-    public double shock_chain_range = 5.0;
-    public double shock_chain_damage = 4.0;
+    public double shock_chain_range = 6.0;
+    public double shock_chain_damage = 6.0;
+    /** How many other creatures the shock arcs to, nearest first. */
+    public int shock_chain_targets = 3;
     /** A lightning bolt strikes whatever a fully drawn arrow hits. */
     public boolean shock_lightning = true;
     /**
@@ -92,7 +91,7 @@ public final class WeaponsConfig {
      * A shocked target is stunned: rooted where it stands, unable to move or jump, for
      * this many ticks. 40 is two seconds, the same as the cage. 0 turns it off.
      */
-    public int shock_stun_ticks = 40;
+    public int shock_stun_ticks = 60;
     /** Entity types a fully drawn hit kills outright, whatever their health. */
     public java.util.List<String> shock_instakill =
             java.util.List.of("minecraft:creeper", "minecraft:skeleton");
@@ -217,6 +216,12 @@ public final class WeaponsConfig {
     /** Extra shove along the swing on every hit, blocks a tick. */
     public double heavy_knockback = 0.5;
     /**
+     * Double Strike: every hit lands a second time - the same damage again as a separate
+     * hit. It is not a mace smash, so a smash cap (MaceCap's four hearts) does not touch
+     * it, and it goes through invulnerability frames. 1.0 = the full hit again; 0 = off.
+     */
+    public double double_strike_fraction = 1.0;
+    /**
      * Comet, on right-click: launched straight up at this speed (1.5 is about 14 blocks),
      * with fall immunity, and "falling as a comet" for comet_window_ticks: the first hit
      * on the way down, or landing, is the impact.
@@ -337,6 +342,13 @@ public final class WeaponsConfig {
     public double absolute_zero_radius = 7.0;
     public double absolute_zero_damage = 6.0;
     public int absolute_zero_freeze_ticks = 80;
+    /**
+     * When the freeze ends the ice shatters: this much more true damage to everyone who was
+     * frozen, plus Slowness and Weakness for absolute_zero_after_ticks. The freeze alone was
+     * just a pause; now it is a countdown.
+     */
+    public double absolute_zero_shatter_damage = 4.0;
+    public int absolute_zero_after_ticks = 100;
     public int absolute_zero_cooldown_ticks = 900;
     public double maelstrom_radius = 8.0;
     public double maelstrom_damage = 6.0;
@@ -374,10 +386,15 @@ public final class WeaponsConfig {
         return FabricLoader.getInstance().getConfigDir().resolve("customweapons.json");
     }
 
+    /** Bumped when a default changes in a way an existing file should follow. Gson keeps this 1 when the key is missing. */
+    public static final int CONFIG_VERSION = 3;
+    public int config_version = 1;
+
     public static WeaponsConfig load() {
         Path file = path();
         if (!Files.exists(file)) {
             WeaponsConfig fresh = new WeaponsConfig();
+            fresh.config_version = CONFIG_VERSION;
             fresh.save();
             return fresh;
         }
@@ -385,6 +402,25 @@ public final class WeaponsConfig {
             WeaponsConfig loaded = GSON.fromJson(reader, WeaponsConfig.class);
             if (loaded == null) {
                 throw new IOException("config file is empty");
+            }
+            if (loaded.config_version < 2) {
+                // Version 2: the Bloodletter's bleed came down. A file still on the old numbers
+                // follows; a hand-tuned one keeps its own.
+                if (loaded.bleed_damage_per_stack == 1.5) loaded.bleed_damage_per_stack = 1.0;
+                if (loaded.bleed_damage_budget == 12.0) loaded.bleed_damage_budget = 9.0;
+            }
+            if (loaded.config_version < 3) {
+                // Version 3: the Stormpiercer got its buff. Old defaults follow, hand-tuned values stay.
+                if (loaded.shock_cooldown_ticks == 600) loaded.shock_cooldown_ticks = 300;
+                if (loaded.shock_bonus_damage == 6.0) loaded.shock_bonus_damage = 12.0;
+                if (loaded.shock_chain_range == 5.0) loaded.shock_chain_range = 6.0;
+                if (loaded.shock_chain_damage == 4.0) loaded.shock_chain_damage = 6.0;
+                if (loaded.shock_stun_ticks == 40) loaded.shock_stun_ticks = 60;
+            }
+            if (loaded.config_version < CONFIG_VERSION) {
+                loaded.config_version = CONFIG_VERSION;
+                loaded.save();
+                CustomWeapons.LOGGER.info("customweapons.json: defaults updated to config version {}", CONFIG_VERSION);
             }
             return loaded;
         } catch (Exception e) {

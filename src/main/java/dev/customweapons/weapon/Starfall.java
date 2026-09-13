@@ -82,7 +82,8 @@ public final class Starfall extends CustomWeapon {
                 Weapons.loreLine(String.format("Impact: landing, or your first hit on the way down, deals %.1f to everything within %.0f blocks",
                         config.impact_damage, config.impact_radius)),
                 Weapons.loreLine(String.format("Cooldown %.0fs - the smash still lands on top", config.comet_cooldown_ticks / 20.0)),
-                Weapons.loreLine("Heavy: every hit knocks further"));
+                Weapons.loreLine("Heavy: every hit knocks further"),
+                Weapons.loreLine("Double Strike: every hit lands twice - the smash included, past any cap"));
     }
 
     @Override
@@ -191,6 +192,18 @@ public final class Starfall extends CustomWeapon {
                       float damageDealt, WeaponsConfig config) {
         CustomWeapons.animations().play(attacker, this, config);
         ServerLevel level = attacker.level() instanceof ServerLevel l ? l : null;
+
+        // Double Strike: the hit lands again. A plain player-attack source, dealt through
+        // Hurt.deal, so it ignores the victim's i-frames and is not a mace smash - a smash
+        // cap elsewhere (MaceCap) never sees it.
+        if (config.double_strike_fraction > 0 && damageDealt > 0 && victim.isAlive()) {
+            float again = (float) (damageDealt * config.double_strike_fraction);
+            Hurt.deal(victim, victim.damageSources().playerAttack(attacker), again);
+            if (config.log_abilities) {
+                CustomWeapons.LOGGER.info("ABILITY double_strike player={} victim={} again={}",
+                        attacker.getName().getString(), victim.getName().getString(), String.format("%.1f", again));
+            }
+        }
 
         // Heavy: an extra shove along the swing.
         if (config.heavy_knockback > 0 && !CustomWeapons.stuns().isRigid(victim)) {

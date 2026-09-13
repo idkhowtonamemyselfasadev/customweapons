@@ -301,7 +301,7 @@ async function main() {
   check(/lore/.test(raw), 'lore reaches the client');
 
   // --------------------------------------------------------------- 3. the bleed
-  console.log('\n== 3. Bloodletter bleed ==');
+  console.log('\n== 3. Bloodletter swings (no bleed) and the hit animation ==');
   cmd('effect give Dummy minecraft:instant_health 1 4 true');
   await sleep(1200);
   const dummyStart = dummy.health;
@@ -319,17 +319,15 @@ async function main() {
     }
     const afterHits = dummy.health;
     console.log(`   Dummy ${dummyStart} -> ${afterHits} after three swings`);
-    await sleep(4000);   // hits stopped; only the bleed is still running
+    await sleep(4000);   // hits stopped: since 1.6.3 nothing keeps running, the bleed is the nova's
     anim.stop();
     const afterBleed = dummy.health;
     console.log(`   Dummy ${afterHits} -> ${afterBleed} with nobody touching it`);
-    check(afterBleed < afterHits, 'bleed keeps damaging after the attacker stops',
+    check(afterHits < dummyStart, 'the swings themselves hurt', `${(dummyStart - afterHits).toFixed(1)} hp`);
+    check(Math.abs(afterBleed - afterHits) < 0.01, 'a plain swing does not bleed (no damage after the attacker stops)',
         `${(afterHits - afterBleed).toFixed(1)} hp`);
-    await sleep(3000);
-    check(Math.abs(dummy.health - afterBleed) < 0.01,
-        'bleed ends on its own', `settled at ${dummy.health.toFixed(1)}`);
-    check(smith.actionBars.some((m) => /Bleed x/.test(m)),
-        'attacker sees the bleed stacks on the action bar',
+    check(!smith.actionBars.some((m) => /Bleed x/.test(m)),
+        'no bleed stacks on the action bar from swings',
         smith.actionBars.filter((m) => /Bleed/.test(m)).slice(-1)[0] || '');
 
     // The blood_slash world effect: 9 block displays per hit, gone again after 12 ticks.
@@ -404,13 +402,19 @@ async function main() {
   {
     cmd('tp Smith 0 -59 0');
     cmd('kill @e[type=minecraft:zombie]');
-    cmd('summon minecraft:zombie 2.5 -59 0.5 {Health:5f,NoAI:1b,PersistenceRequired:1b,CustomName:\'"Bleeder"\',active_effects:[{id:"minecraft:fire_resistance",duration:1200}]}');
+    // Eight health: the nova's 6.0 true damage leaves 2, and the first bleed tick (3 stacks x 1.0) kills.
+    cmd('summon minecraft:zombie 2.5 -59 0.5 {Health:8f,NoAI:1b,PersistenceRequired:1b,CustomName:\'"Bleeder"\',active_effects:[{id:"minecraft:fire_resistance",duration:1200}]}');
+    cmd('tp Dummy 30 -59 30');   // out of the nova's reach
     await sleep(1500);
     const zombie = Object.values(smith.entities).find((e) => e.name === 'zombie');
-    check(!!zombie, 'a zombie on five health stands beside Smith');
+    check(!!zombie, 'a zombie on eight health stands beside Smith');
     if (zombie) {
       const offset = fs.readFileSync(RUN + '/test.log', 'utf8').length;
-      smith.attack(zombie);   // one swing: ~3.7 through zombie armour leaves ~1.3 hp; the first 1.5 bleed tick kills
+      smith.setControlState('sneak', true);   // sneak + left-click: Crimson Nova, the only thing that bleeds
+      await sleep(150);
+      smith.swingArm('right');
+      await sleep(300);
+      smith.setControlState('sneak', false);
       await sleep(3500);      // the bleed ticks every 10 ticks; the kill lands within the first two
       const tail = fs.readFileSync(RUN + '/test.log', 'utf8').slice(offset);
       const dead = /Bleeder (was slain|died|was killed)|Named entity .*Bleeder.* died/.test(tail)
@@ -424,6 +428,7 @@ async function main() {
     }
     cmd('kill @e[type=minecraft:zombie]');
     cmd('kill @e[type=minecraft:item]');
+    cmd('tp Dummy 2 -59 0');
   }
 
   console.log('\n== 4. an anvil-renamed sword must not bleed ==');
@@ -435,9 +440,10 @@ async function main() {
   smith.actionBars.length = 0;
   const spoofTarget = smith.players['Dummy'].entity;
   for (let i = 0; i < 2; i++) { smith.attack(spoofTarget); await sleep(600); }
+  smith.activateItem();
   await sleep(1500);
-  check(!smith.actionBars.some((m) => /Bleed x/.test(m)),
-      'renamed sword applies no bleed');
+  check(!smith.actionBars.some((m) => /Bleed x|Rage/.test(m)),
+      'renamed sword applies no bleed and has no Rage');
 
   // ------------------------------------------------------------- 5. the Gale Edge
   console.log('\n== 5. Gale Edge dash and Momentum Strike ==');
@@ -743,8 +749,8 @@ async function main() {
     check(!!(shocked && shocked.probed), 'the stun was observed on the shock hit');
     if (shocked) {
       shockHitAt = Date.now();
-      check(Math.abs(shocked.drop - 16) <= 1.5,
-          'with the shock ready a full draw deals 10 (arrow) + 6 (shock)',
+      check(Math.abs(shocked.drop - 22) <= 1.5,
+          'with the shock ready a full draw deals 10 (arrow) + 12 (shock)',
           `${shocked.drop.toFixed(1)} hp`);
       check(shocked.bars.some((m) => /^Shock/.test(m.trim())),
           'the shooter sees the shock land', shocked.bars.slice(-1)[0] || '');
@@ -752,7 +758,7 @@ async function main() {
       check(shocked.endRods >= 1, 'the storm_cage has an end_rod display while it stands',
           `${shocked.endRods} on the server`);
 
-      // Straight away again, well inside the 30s cooldown: the arrow still does its 10, the
+      // Straight away again, well inside the 15s cooldown: the arrow still does its 10, the
       // shock does not fire, and the shooter is told how long is left.
       const plain = await fullDrawAtDummy('full draw, shock on cooldown', false);
       check(!!plain, 'a full draw inside the cooldown still lands');
@@ -1222,10 +1228,10 @@ async function main() {
   cmd('tp Archer 3 -59 4');
   await sleep(1500);
   await equipByName(archer, 'bow');
-  // The shock cooldown (30s) was charged by the hit in section 7, and a full draw inside it
+  // The shock cooldown (15s) was charged by the hit in section 7, and a full draw inside it
   // is a plain arrow that would not execute anything. Nothing resets it short of a
   // reconnect, so wait it out; the shot then proves the shock comes back on its own.
-  const cooldownLeft = shockHitAt ? shockHitAt + 31500 - Date.now() : 0;
+  const cooldownLeft = shockHitAt ? shockHitAt + 16500 - Date.now() : 0;
   if (cooldownLeft > 0) {
     console.log(`   waiting ${(cooldownLeft / 1000).toFixed(1)}s for the shock cooldown`);
     await sleep(cooldownLeft);
@@ -1414,7 +1420,7 @@ async function main() {
   console.log(`   full draws fired with the shock ready: ${fullDraws}`);
 
   // ------------------------------------- 8b. the v1.4 weapons and abilities
-  console.log('\n== 8b. Dawnbreaker, Voidreaper, Starfall, Exsanguinate, Stagger ==');
+  console.log('\n== 8b. Dawnbreaker, Voidreaper, Starfall, Rage, Stagger ==');
   const dist3 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
   const barHas = (bot, re) => bot.actionBars.some((m) => re.test(m.trim()));
   // The flat world's random seed lands on a slime chunk now and then, and slimes kept
@@ -1670,50 +1676,54 @@ async function main() {
     await sleep(500);
     check(barHas(smith, /^Comet\s+[\d.]+s$/), 'a second Comet inside the cooldown is refused with the time left',
         JSON.stringify(smith.actionBars));
+    // Double Strike: one plain swing lands twice, so Dummy loses about double a mace swing.
+    // The Dummy wears Resistance III (60% off), so a single 8.0 swing shows as ~3.2 and the
+    // pair as ~6.4; anything past a single swing's worth proves the second hit landed.
+    await sleep(2500);   // past the comet window, so this swing is a plain one
+    await healDummy();
+    await sleep(600);
+    const dsBefore = dummy.health;
+    const dsTarget = smith.players['Dummy'] && smith.players['Dummy'].entity;
+    if (dsTarget) {
+      await smith.lookAt(dsTarget.position.offset(0, 1.2, 0), true);
+      smith.attack(dsTarget);
+      await sleep(700);
+      const dsDrop = dsBefore - dummy.health;
+      console.log(`   Double Strike: Dummy ${dsBefore} -> ${dummy.health} (-${dsDrop.toFixed(1)}) from one swing`);
+      check(dsDrop >= 5.0, 'one Starfall swing lands twice (Double Strike: >= 5 through Resistance III)', `${dsDrop.toFixed(1)} hp`);
+    } else {
+      fail('Smith can see Dummy for the Double Strike');
+    }
   }
 
-  // ---- Bloodletter Exsanguinate: bursts the bleeds the wielder owns nearby.
-  console.log('   -- Exsanguinate');
+  // ---- Bloodletter Rage: Strength I for ten seconds on right-click, thirty seconds of cooldown.
+  console.log('   -- Rage');
   clearSlimes();
   cmd('clear Smith');
   cmd('customweapon give Smith bloodletter');
-  cmd('effect clear Dummy');
+  cmd('effect clear Smith');
   cmd('tp Smith 0 -59 0');
-  cmd('tp Dummy 2 -59 0');
-  await healDummy();
   await sleep(800);
   await equipByName(smith, 'netherite_sword');
-  const bleedTarget = smith.players['Dummy'] && smith.players['Dummy'].entity;
-  if (!bleedTarget) {
-    fail('Smith can see Dummy for the Exsanguinate');
-  } else {
-    smith.actionBars.length = 0;
-    smith.activateItem();
-    await sleep(500);
-    check(barHas(smith, /^Exsanguinate\s+nothing bleeding$/), 'with nothing bleeding it says so and costs nothing',
-        JSON.stringify(smith.actionBars));
-    await smith.lookAt(bleedTarget.position.offset(0, 1.2, 0), true);
-    for (let i = 0; i < 2; i++) { smith.attack(bleedTarget); await sleep(600); }
-    await sleep(200);
-    smith.actionBars.length = 0;
-    const burstBefore = dummy.health;
-    const burstAt = Date.now();
-    smith.activateItem();
-    const burst = await waitUntil(() => dummy.health < burstBefore - 4, 800);
-    await sleep(400);
-    const burstDrop = burstBefore - dummy.health;
-    console.log(`   Exsanguinate: Dummy ${burstBefore} -> ${dummy.health} (-${burstDrop.toFixed(1)}) ; Smith bar ${JSON.stringify(smith.actionBars)}`);
-    check(burst && burstDrop >= 5, 'the burst lands the rest of the bleed at once (>= 5 within 0.8 s)', `${burstDrop.toFixed(1)} hp`);
-    check(barHas(smith, /^Exsanguinate\s+1 burst, \+4\.0$/), 'Smith sees "Exsanguinate  1 burst, +4.0" (two stacks)',
-        smith.actionBars.slice(-1)[0] || '');
-    const burstFx = fxSince(dummy, burstAt, 1000, 2000);
-    console.log(`   blood_burst: Dummy was sent ${burstFx.spawned} block displays, ${burstFx.gone} removed within 2s`);
-    check(burstFx.spawned >= 4, 'the burst spawns its displays (>= 4)', `${burstFx.spawned}`);
-    await sleep(1200);
-    const afterBurst = dummy.health;
-    await sleep(1200);
-    check(dummy.health === afterBurst, 'the bleed is over after the burst (no more ticks)', `${afterBurst} -> ${dummy.health}`);
+  smith.actionBars.length = 0;
+  smith.activateItem();
+  await sleep(600);
+  check(barHas(smith, /^Rage\s+Strength I for 10s$/), 'Smith sees "Rage  Strength I for 10s"', JSON.stringify(smith.actionBars));
+  {
+    const offset = fs.readFileSync(RUN + '/test.log', 'utf8').length;
+    cmd('data get entity Smith active_effects');
+    await sleep(600);
+    const tail = fs.readFileSync(RUN + '/test.log', 'utf8').slice(offset);
+    // amplifier 0 is not printed at all, so the id line is the proof; the tail also holds
+    // "No entity was found" noise from the slime sweeps, hence the specific line.
+    const strengthLine = tail.split('\n').find((l) => l.includes('minecraft:strength')) || '';
+    check(!!strengthLine && !/amplifier: [1-9]/.test(strengthLine), 'Smith has Strength I (server-side)', strengthLine.slice(0, 160) || '(no strength line)');
   }
+  smith.actionBars.length = 0;
+  smith.activateItem();
+  await sleep(500);
+  check(barHas(smith, /^Rage\s+\d+\.\ds$/), 'a second Rage is on cooldown', JSON.stringify(smith.actionBars));
+  cmd('effect clear Smith');
 
   // ---- Aegis Hammer Stagger: the third quick hit stuns for a second.
   console.log('   -- Stagger');

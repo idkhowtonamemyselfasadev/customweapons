@@ -18,35 +18,32 @@ Built and verified against a real 1.21.11 dedicated server — see [Testing](#te
 
 | Weapon | Base item | Attack damage | Attack speed | DPS | Cooldown |
 |---|---|---|---|---|---|
-| **Bloodletter** | netherite sword | 4.0 | 2.0 | 8.0 swings + 9.0 bleed = 17.0 | none |
+| **Bloodletter** | netherite sword | 4.0 | 2.0 | 8.0 (Strength I: 11.0 with Rage) | Rage 30 s |
 | **Gale Edge** | diamond sword | 7.0 | 1.8 | 12.6, +4.0 after a dash | 8 s |
-| **Stormpiercer** | bow | 10.0 full draw, +6.0 lightning | — | — | 30 s, unbreakable |
+| **Stormpiercer** | bow | 10.0 full draw, +12.0 lightning | — | — | 15 s, unbreakable |
 | **Aegis Hammer** | netherite axe | 11.0 | 0.9 | 9.9, slam 8.0 | 15 s |
 | **Frostbrand** | iron sword | 8.0 | 1.6 | 12.8, shatter +8.0 | 5 s after a shatter (target frozen 3 s) |
 | **Tidecaller** | trident | 10.0 | 1.1 | 11.0, +4.0 wet | 10 s |
 | **Hellfire** | crossbow | bolt + blast | — | — | 8 s |
 | **Dawnbreaker** | golden sword | 9.0, +2.0 by day | 1.7 | 15.3 by day, sunstrike 9.0 | 15 s |
 | **Voidreaper** | netherite hoe | 10.0 | 1.3 | 13.0, backstab +6.0 | 12 s |
-| **Starfall** | mace | 8.0 | 0.7 | 5.6, impact 8.0 in 4 blocks | 20 s |
+| **Starfall** | mace | 8.0 ×2 (Double Strike) | 0.7 | 11.2, impact 8.0 in 4 blocks | 20 s |
 
 A vanilla netherite sword is 12.8 DPS, a netherite axe 10.0, an iron sword 9.6 and a trident
 9.9. These are legendaries, one of each on the world: each matches or beats its vanilla
 counterpart on raw damage, and the ability is on top. All of it is in the config.
 
-### Bloodletter — sustained bleed
+### Bloodletter — Rage, and the nova's bleed
 
-4.0 a hit on a fast swing, and the swing exists to stack bleed.
+4.0 a hit on a fast swing. Since 1.6.3 a plain swing does **not** bleed any more — the
+bleed belongs to the ultimate.
 
-- Every hit applies or refreshes **Bleed** for 3 s, stacking to 3.
-- Bleed deals **1.5 per stack every 0.5 s** — 3.0 DPS a stack, 9.0 DPS at three.
-- Each bleed carries a **12.0 damage budget**; when it is spent the bleed ends, and a fresh
-  hit refills it. Without that cap, a bleed whose timer every hit refreshes never stops.
-- One bleed per victim. A second Bloodletter user takes over the existing one rather than
-  running a parallel stack. Cleared by milk, death and a dimension change.
-- Bleed kills are credited to whoever applied it, even if they log out mid-bleed.
-- **Exsanguinate** (right-click, 20 s): every bleed you own within 8 blocks bursts — the whole
-  rest of its budget lands at once as one hit, the bleed ends, and you heal 2.0 per stack
-  burst. With nothing bleeding nearby it says so and costs nothing.
+- **Rage** (right-click, 30 s): **Strength I for 10 s**. No target needed.
+- **Bleed** — only from **Crimson Nova** (sneak + left-click): everything within 6 blocks
+  takes the nova's true damage and starts bleeding at full stacks — **1.0 per stack every
+  0.5 s**, three stacks, **9.0 in all** — and you heal ½ heart per victim.
+- One bleed per victim; bleed kills are credited to whoever applied it. Cleared by milk,
+  death and a dimension change.
 
 ### Gale Edge — mobility duellist
 
@@ -60,11 +57,11 @@ counterpart on raw damage, and the ability is on top. All of it is in the config
 
 - A **fully drawn** arrow hits for exactly **10.0** (five hearts) before armour: no crit
   roll, and partial draws scale down with the draw.
-- When the shock is ready, a fully drawn hit adds **+6.0** for **16.0** (eight hearts),
+- When the shock is ready, a fully drawn hit adds **+12.0** for **22.0** (eleven hearts),
   **calls a lightning bolt down on the target**, applies Glowing for 6 s, and chains to one
-  other entity within 5 blocks for 3.0. Then **30 s** of cooldown, charged on the hit; the
+  and arcs to up to **three** other creatures within 6 blocks for 6.0 each, stunning them too. Then **15 s** of cooldown, charged on the hit; the
   bow still hits for 10 meanwhile and the action bar shows the time left.
-- The shocked target is **stunned for 2 s** (`shock_stun_ticks`): rooted where it stands,
+- The shocked target is **stunned for 3 s** (`shock_stun_ticks`): rooted where it stands,
   unable to move or jump, while the lightning rods circle it.
 - A fully drawn hit **kills a creeper or a skeleton outright** (`shock_instakill`, a list of
   entity ids, never players). The kill goes through the normal death path, so it is credited
@@ -72,7 +69,7 @@ counterpart on raw damage, and the ability is on top. All of it is in the config
 - The bolt is **visual only** by default: flash and thunder, but no fire, no charged creeper
   and no villager turned witch. `shock_lightning_fire: true` makes it a real bolt that does
   all of that.
-- 6 s cooldown, charged on the hit, so a miss costs nothing. The bow keeps firing normal
+- 15 s cooldown, charged on the hit, so a miss costs nothing. The bow keeps firing normal
   arrows while the shock recharges.
 - **It cannot be enchanted at all.** The `enchantable` component is stripped so an enchanting
   table offers it nothing, and any enchantment that arrives another way — an anvil, `/enchant`
@@ -156,6 +153,10 @@ counterpart on raw damage, and the ability is on top. All of it is in the config
   vanilla mace smash still lands on top of it, so a hit from the top of the arc is the
   smash, the impact and the swing at once.
 - **Heavy** (passive): every hit shoves the target half a block further along your swing.
+- **Double Strike** (passive, 1.6.3): every hit lands **twice** — the second is a separate
+  plain hit for the same damage, through invulnerability frames, and because it is not a mace
+  smash, MaceCap's four-heart cap never touches it. A smash from height is the smash, the
+  Impact, the swing and the swing again. `double_strike_fraction` in the config (1.0).
 - 8.0 at 0.7 over a vanilla mace's 6.0 at 0.6.
 
 ---
@@ -175,7 +176,7 @@ are sized so an ultimate plus the weapon's own ability lands at **6 hearts at mo
 | Gale Edge | **Tempest** (6) | flung up and away, Slowness II | 30 s |
 | Stormpiercer | **Thunderstorm** (12) | lightning on each, stunned 1 s, glowing | 50 s |
 | Aegis Hammer | **Earthquake** (8, from the ground) | launched, Slowness III; Resistance II for you | 55 s |
-| Frostbrand | **Absolute Zero** (7) | frozen solid for 4 s | 45 s |
+| Frostbrand | **Absolute Zero** (7) | frozen solid for 4 s, then the thaw **shatters**: +4.0 true damage, Slowness III and Weakness for 5 s | 45 s |
 | Tidecaller | **Maelstrom** (8) | dragged to you, slowed; Conduit Power for you | 40 s |
 | Hellfire | **Inferno** (7) | burning 6 s, shoved | 50 s |
 | Dawnbreaker | **Judgement** (10) | ×1.5 vs undead, blinded, burning; heals you 2 hearts | 55 s |
@@ -379,7 +380,7 @@ and only in newly generated chunks. Set `altars_per_weapon` to 0 for no limit, a
 ## Install
 
 1. Stop the server.
-2. Put `customweapons-1.6.2.jar` in `mods/`, alongside **Fabric API** (`0.141.6+1.21.11` or
+2. Put `customweapons-1.6.3.jar` in `mods/`, alongside **Fabric API** (`0.141.6+1.21.11` or
    newer). `mods/` — not `world/datapacks/`; this is a mod, not a datapack.
 3. Start the server. The console prints:
 
@@ -498,7 +499,7 @@ in the mod needs to know about it.
 
 ```bash
 JAVA_HOME=/home/tim/.gradle/jdks/eclipse_adoptium-21-amd64-linux.2 ./gradlew build
-# -> build/libs/customweapons-1.6.2.jar
+# -> build/libs/customweapons-1.6.3.jar
 ```
 
 ## Testing

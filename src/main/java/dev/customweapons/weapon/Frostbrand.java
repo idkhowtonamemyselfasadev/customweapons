@@ -282,6 +282,7 @@ public final class Frostbrand extends CustomWeapon {
         ServerLevel level = (ServerLevel) player.level();
         Ultimate.plant(player, 12);
         int hit = 0;
+        java.util.List<LivingEntity> frozen = new java.util.ArrayList<>();
         for (LivingEntity victim : Ultimate.targets(player, config.absolute_zero_radius)) {
             if (Ultimate.strike(player, victim, config.absolute_zero_damage)) {
                 hit++;
@@ -289,13 +290,44 @@ public final class Frostbrand extends CustomWeapon {
             CustomWeapons.stuns().stun(victim, config.absolute_zero_freeze_ticks, "Absolute Zero", true);
             victim.setTicksFrozen(Math.max(victim.getTicksFrozen(), 200));
             CustomWeapons.effects().play(level, "frost_hit", victim);
+            frozen.add(victim);
         }
         level.sendParticles(ParticleTypes.SNOWFLAKE, player.getX(), player.getY() + 1, player.getZ(), 150, 3.5, 1, 3.5, 0.02);
+        // The thaw is the second half: the ice shatters off everyone still standing, with
+        // more true damage and a slow, weak stagger afterwards.
+        if (config.absolute_zero_shatter_damage > 0 && !frozen.isEmpty()) {
+            CustomWeapons.effects().later(config.absolute_zero_freeze_ticks, () -> {
+                int shattered = 0;
+                for (LivingEntity victim : frozen) {
+                    if (!victim.isAlive()) {
+                        continue;
+                    }
+                    if (Ultimate.strike(player, victim, config.absolute_zero_shatter_damage)) {
+                        shattered++;
+                    }
+                    if (config.absolute_zero_after_ticks > 0) {
+                        victim.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, config.absolute_zero_after_ticks, 2));
+                        victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, config.absolute_zero_after_ticks, 0));
+                    }
+                    CustomWeapons.effects().play(level, "frost_hit", victim);
+                    level.sendParticles(ParticleTypes.ITEM_SNOWBALL, victim.getX(), victim.getY() + victim.getBbHeight() * 0.6, victim.getZ(), 30, 0.4, 0.5, 0.4, 0.1);
+                }
+                level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 1.0f, 0.6f);
+                if (config.log_abilities) {
+                    CustomWeapons.LOGGER.info("ABILITY absolute_zero_shatter player={} victims={}", player.getName().getString(), shattered);
+                }
+                if (shattered > 0) {
+                    player.displayClientMessage(Component.literal("Shatter  " + shattered + " hit").withStyle(ChatFormatting.AQUA), true);
+                }
+            });
+        }
         Ultimate.fired(player, this, ABSOLUTE_ZERO, config.absolute_zero_cooldown_ticks, "Absolute Zero", hit, SoundEvents.GLASS_BREAK, 0.5f, config);
     }
 
     @Override
     public String ultimateLore(WeaponsConfig config) {
-        return String.format("Absolute Zero - everything within %.0f blocks frozen solid for %.0fs and %.1f true damage. %ds", config.absolute_zero_radius, config.absolute_zero_freeze_ticks / 20.0, config.absolute_zero_damage, config.absolute_zero_cooldown_ticks / 20);
+        return String.format("Absolute Zero - everything within %.0f blocks frozen solid for %.0fs and %.1f true damage; the thaw shatters for %.1f more and leaves them slow and weak for %.0fs. %ds",
+                config.absolute_zero_radius, config.absolute_zero_freeze_ticks / 20.0, config.absolute_zero_damage,
+                config.absolute_zero_shatter_damage, config.absolute_zero_after_ticks / 20.0, config.absolute_zero_cooldown_ticks / 20);
     }
 }
