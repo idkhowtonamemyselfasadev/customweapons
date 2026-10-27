@@ -8,6 +8,7 @@ runtest/versions/
 runtest/mods/
 runtest/*.jar
 runtest/*.log
+runtest/run-*.txt
 runtest/usercache.json
 runtest/console.fifo
 pack/ref/
