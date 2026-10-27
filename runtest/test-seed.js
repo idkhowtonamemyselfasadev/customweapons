@@ -13,7 +13,7 @@
 // 5. teleport onto every altar: a lodestone sits at the recorded position, exactly one
 //    label entity per line floats above it; then revisit the first one after its chunk
 //    was unloaded, to catch labels that multiply on every chunk load
-const mineflayer = require('$HOME/claude/anticheat/test/node_modules/mineflayer');
+const mineflayer = require(require('os').homedir() + '/claude/anticheat/test/node_modules/mineflayer');
 const fs = require('fs');
 
 const RUN = __dirname;
@@ -193,7 +193,7 @@ async function main() {
       'find names one of the seeded altars');
 
   console.log('\n== 5. the temples are really there ==');
-  const { Vec3 } = require('$HOME/claude/anticheat/test/node_modules/vec3');
+  const { Vec3 } = require(require('os').homedir() + '/claude/anticheat/test/node_modules/vec3');
   // Visit every altar: the lodestone at the recorded position, and exactly one label per
   // line (the main suite's standard: 5 stands, name + 4 ingredients), not a duplicated set.
   const labelKinds = {};

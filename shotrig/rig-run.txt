@@ -1,5 +1,5 @@
 client exit 0
-70 screenshots in $HOME/claude/customweapons/shotrig/shots
+70 screenshots in shotrig/shots
 [18:55:06] [Render thread/INFO] (cwshot) script: wait 4
 [18:55:06] [IO-Worker-2/INFO] (cwshot) screenshot Saved screenshot as 10_starfall_c_ult_t5.png
 [18:55:06] [Render thread/INFO] (cwshot) script: shot 10_starfall_e_t12_landing

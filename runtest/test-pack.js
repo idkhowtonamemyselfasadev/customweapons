@@ -3,7 +3,7 @@
 // never silences the question on the next join.
 //
 // Standalone: run-pack-test.sh boots the server, then runs `node test-pack.js`.
-const mineflayer = require('$HOME/claude/anticheat/test/node_modules/mineflayer');
+const mineflayer = require(require('os').homedir() + '/claude/anticheat/test/node_modules/mineflayer');
 
 const PORT = parseInt(process.env.PORT || '25603', 10);
 const WANT_URL_PART = 'CustomWeapons-Models.zip';

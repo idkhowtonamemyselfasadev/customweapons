@@ -9,7 +9,7 @@ MOD="$(dirname "$DIR")"
 SRV="$DIR/server"
 GRADLE="$HOME/.gradle/wrapper/dists/gradle-9.6.1-bin/4ticwg1pgcbps2hj28r8so764/gradle-9.6.1/bin/gradle"
 [ -x "$GRADLE" ] || GRADLE="$HOME/opt/gradle-9.6.1/bin/gradle"
-export JAVA_HOME=$HOME/.gradle/jdks/eclipse_adoptium-21-amd64-linux.2
+export JAVA_HOME="$HOME/.gradle/jdks/eclipse_adoptium-21-amd64-linux.2"
 [ -d "$JAVA_HOME" ] || export JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")"
 PORT=25604
 

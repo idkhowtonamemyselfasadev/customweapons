@@ -4,7 +4,7 @@
 //   - ACCEPTED then SUCCESSFULLY_LOADED keeps the player connected
 //
 // Standalone: run-pack-test.sh boots the server, then runs `node test-pack-required.js`.
-const mineflayer = require('$HOME/claude/anticheat/test/node_modules/mineflayer');
+const mineflayer = require(require('os').homedir() + '/claude/anticheat/test/node_modules/mineflayer');
 
 const PORT = parseInt(process.env.PORT || '25603', 10);
 const PACK_ID = '6f1c2a8e-3d4b-4c5e-9a0f-1b2c3d4e5f60';

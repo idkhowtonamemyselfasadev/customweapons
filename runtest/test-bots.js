@@ -3,11 +3,11 @@
 // mineflayer speaks the plain vanilla protocol and knows nothing about this mod, which is
 // exactly the point: if a bot can craft the weapon, see its name and stats, and feel its
 // abilities, then so can a real player on an unmodified client.
-const mineflayer = require('$HOME/claude/anticheat/test/node_modules/mineflayer');
+const mineflayer = require(require('os').homedir() + '/claude/anticheat/test/node_modules/mineflayer');
 const fs = require('fs');
 // The mod's world effects are vanilla block_display entities; a client only ever sees the
 // numeric type id in spawn_entity.
-const MC_DATA = require('$HOME/claude/anticheat/test/node_modules/minecraft-data')('1.21.11');
+const MC_DATA = require(require('os').homedir() + '/claude/anticheat/test/node_modules/minecraft-data')('1.21.11');
 const BLOCK_DISPLAY = MC_DATA.entitiesByName.block_display.id;
 
 const RUN = __dirname;

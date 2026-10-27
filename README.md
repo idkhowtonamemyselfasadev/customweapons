@@ -498,7 +498,7 @@ in the mod needs to know about it.
 ## Build
 
 ```bash
-JAVA_HOME=$HOME/.gradle/jdks/eclipse_adoptium-21-amd64-linux.2 ./gradlew build
+JAVA_HOME="$HOME/.gradle/jdks/eclipse_adoptium-21-amd64-linux.2" ./gradlew build
 # -> build/libs/customweapons-1.6.3.jar
 ```
 
